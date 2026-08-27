@@ -3,6 +3,7 @@ services:
     name: tescgsm-admin
     runtime: node
     plan: free
+    branch: production
     buildCommand: npm ci --include=dev && npm run build
     startCommand: npm start
     envVars:

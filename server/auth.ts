@@ -1,7 +1,10 @@
-import { timingSafeEqual, randomBytes } from 'node:crypto'
+import { randomBytes } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { findLoginByUsername, findStaffById, publicUserFromRecord } from './db.ts'
+import { verifyPassword } from './password.ts'
+import { type Permission, type PublicUser, hasPermission } from '../src/data/permissions.ts'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -24,40 +27,50 @@ function loadEnvFile() {
 
 loadEnvFile()
 
-const adminUser = process.env.ADMIN_USER ?? 'admin'
-const adminPassword = process.env.ADMIN_PASSWORD ?? 'tescgsm'
-const sessions = new Map<string, number>()
-const sessionMs = 1000 * 60 * 60 * 8
-
-function safeEqual(left: string, right: string) {
-  const a = Buffer.from(left)
-  const b = Buffer.from(right)
-  if (a.length !== b.length) return false
-  return timingSafeEqual(a, b)
+type Session = {
+  userId: number
+  expires: number
 }
 
-export function login(username: string, password: string): string | null {
-  if (!safeEqual(username, adminUser) || !safeEqual(password, adminPassword)) {
-    return null
-  }
+const sessions = new Map<string, Session>()
+const sessionMs = 1000 * 60 * 60 * 8
+
+export async function login(username: string, password: string): Promise<{ token: string; user: PublicUser } | null> {
+  const record = await findLoginByUsername(username.trim())
+  if (!record || !record.active) return null
+  if (!verifyPassword(password, record.passwordHash)) return null
+  const user = publicUserFromRecord(record)
   const token = randomBytes(32).toString('hex')
-  sessions.set(token, Date.now() + sessionMs)
-  return token
+  sessions.set(token, { userId: record.id, expires: Date.now() + sessionMs })
+  return { token, user }
 }
 
 export function logout(token: string) {
   sessions.delete(token)
 }
 
-export function isAuthed(token: string | undefined): boolean {
-  if (!token) return false
-  const expires = sessions.get(token)
-  if (!expires) return false
-  if (expires < Date.now()) {
+export async function currentUser(token: string | undefined): Promise<PublicUser | undefined> {
+  if (!token) return undefined
+  const session = sessions.get(token)
+  if (!session) return undefined
+  if (session.expires < Date.now()) {
     sessions.delete(token)
-    return false
+    return undefined
   }
-  return true
+  const record = await findStaffById(session.userId)
+  if (!record || !record.active) {
+    sessions.delete(token)
+    return undefined
+  }
+  return publicUserFromRecord(record)
+}
+
+export async function isAuthed(token: string | undefined): Promise<boolean> {
+  return Boolean(await currentUser(token))
+}
+
+export async function can(token: string | undefined, permission: Permission): Promise<boolean> {
+  return hasPermission(await currentUser(token), permission)
 }
 
 export function readToken(header: string | undefined): string | undefined {

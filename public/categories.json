@@ -1,0 +1,14 @@
+[
+  {
+    "id": 1,
+    "name": "Batteries",
+    "active": true,
+    "sortOrder": 0
+  },
+  {
+    "id": 2,
+    "name": "LCD",
+    "active": true,
+    "sortOrder": 1
+  }
+]

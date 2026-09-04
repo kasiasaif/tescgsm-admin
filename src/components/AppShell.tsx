@@ -1,21 +1,26 @@
 import { useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth'
+import { BrandMark } from './BrandMark'
 import { Sidebar } from './Sidebar'
 
 const titles: Record<string, string> = {
   '/': 'Dashboard',
   '/products': 'Products',
+  '/categories': 'Categories',
+  '/banners': 'Banners',
   '/orders': 'Orders',
   '/customers': 'Customers',
   '/settings': 'Settings',
+  '/staff': 'Staff',
 }
 
 export function AppShell() {
-  const { logout } = useAuth()
+  const { logout, user } = useAuth()
   const { pathname } = useLocation()
   const [open, setOpen] = useState(false)
   const title = titles[pathname] ?? 'tescgsm'
+  const initials = (user?.username ?? 'AD').slice(0, 2).toUpperCase()
 
   return (
     <div className="crm">
@@ -26,15 +31,16 @@ export function AppShell() {
           <button className="menu-btn" type="button" aria-label="Open menu" onClick={() => setOpen(true)}>
             Menu
           </button>
+          <BrandMark />
           <div>
             <p className="crumb">tescgsm CRM</p>
             <h1>{title}</h1>
           </div>
           <div className="user-chip">
-            <span>AD</span>
+            <span>{initials}</span>
             <div>
-              <strong>Admin</strong>
-              <small>hello@tescgsm.es</small>
+              <strong>{user?.username ?? 'Admin'}</strong>
+              <small>{user?.role === 'admin' ? 'Admin' : 'General staff'}</small>
             </div>
           </div>
         </header>

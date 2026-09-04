@@ -1,5 +1,8 @@
 import { NavLink } from 'react-router-dom'
+import { useAuth } from '../auth'
 import { shopUrl } from '../config'
+import { routePermission } from '../data/permissions'
+import { BrandMark } from './BrandMark'
 
 const nav = [
   {
@@ -7,6 +10,8 @@ const nav = [
     items: [
       { to: '/', label: 'Dashboard' },
       { to: '/products', label: 'Products' },
+      { to: '/categories', label: 'Categories' },
+      { to: '/banners', label: 'Banners' },
     ],
   },
   {
@@ -18,7 +23,10 @@ const nav = [
   },
   {
     label: 'System',
-    items: [{ to: '/settings', label: 'Settings' }],
+    items: [
+      { to: '/staff', label: 'Staff' },
+      { to: '/settings', label: 'Settings' },
+    ],
   },
 ]
 
@@ -29,10 +37,18 @@ type SidebarProps = {
 }
 
 export function Sidebar({ open, onClose, onLogout }: SidebarProps) {
+  const { can } = useAuth()
+  const groups = nav
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => can(routePermission[item.to])),
+    }))
+    .filter((group) => group.items.length > 0)
+
   return (
     <aside className={open ? 'sidebar is-open' : 'sidebar'}>
       <div className="sidebar-brand">
-        <span className="sidebar-mark">t</span>
+        <BrandMark />
         <div>
           <strong>tescgsm</strong>
           <small>Admin CRM</small>
@@ -40,7 +56,7 @@ export function Sidebar({ open, onClose, onLogout }: SidebarProps) {
       </div>
 
       <nav className="sidebar-nav" aria-label="CRM">
-        {nav.map((group) => (
+        {groups.map((group) => (
           <div key={group.label} className="nav-group">
             <p className="nav-label">{group.label}</p>
             {group.items.map((item) => (

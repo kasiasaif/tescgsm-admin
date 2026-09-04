@@ -16,7 +16,7 @@ export function Login() {
     <div className="login-screen">
       <aside className="login-brand">
         <div className="login-brand-copy">
-          <BrandMark size={48} />
+          <BrandMark size={112} />
           <p className="crumb">tescgsm</p>
           <h1>Catalog administration</h1>
           <p>Batteries and LCD for tescgsm.es</p>

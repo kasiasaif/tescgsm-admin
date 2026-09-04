@@ -100,8 +100,8 @@ a {
 }
 
 .login-brand .brand-mark {
-  width: 3rem;
-  height: 3rem;
+  width: 7rem;
+  height: 7rem;
   margin-bottom: 1.35rem;
 }
 
@@ -243,11 +243,12 @@ a {
 }
 
 .brand-mark {
-  width: 2.15rem;
-  height: 2.15rem;
+  width: 4rem;
+  height: 4rem;
   flex-shrink: 0;
   display: block;
   border-radius: 50%;
+  object-fit: cover;
   background: #fff;
 }
 

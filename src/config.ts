@@ -4,4 +4,4 @@ export const shopUrl = import.meta.env.DEV
 
 export const adminUrl = import.meta.env.DEV
   ? (import.meta.env.VITE_ADMIN_URL ?? 'http://localhost:5174')
-  : (import.meta.env.VITE_ADMIN_URL ?? 'https://admin-tescgsm.es')
+  : (import.meta.env.VITE_ADMIN_URL ?? 'https://admin.tescgsm.es')

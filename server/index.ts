@@ -14,7 +14,7 @@ const host = process.env.HOST ?? (isProd ? '0.0.0.0' : '127.0.0.1')
 const distDir = join(fileURLToPath(new URL('.', import.meta.url)), '..', 'dist')
 const allowedOrigins = (
   process.env.CORS_ORIGINS ??
-  'http://localhost:5173,http://localhost:5174,https://tescgsm.es,https://www.tescgsm.es,https://admin-tescgsm.es'
+  'http://localhost:5173,http://localhost:5174,https://tescgsm.es,https://www.tescgsm.es,https://admin.tescgsm.es'
 )
   .split(',')
   .map((item) => item.trim())

@@ -28,7 +28,7 @@ services:
       - key: MYSQL_ROOT_PASSWORD
         sync: false
       - key: CORS_ORIGINS
-        value: https://tescgsm.es,https://www.tescgsm.es,https://admin.tescgsm.es
+        value: https://tescgsm.es,https://www.tescgsm.es,https://tescgsm-admin.es,https://www.tescgsm-admin.es
       - key: DATABASE_URL
         fromDatabase:
           name: tescgsm-db

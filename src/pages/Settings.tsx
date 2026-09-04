@@ -18,7 +18,7 @@ export function Settings() {
             <dt>Admin</dt>
             <dd>
               <a href={adminUrl} target="_blank" rel="noreferrer">
-                admin.tescgsm.es
+                tescgsm-admin.es
               </a>
             </dd>
           </div>

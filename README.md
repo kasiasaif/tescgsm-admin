@@ -2,7 +2,7 @@
 
 Admin CRM for the [tescgsm](https://tescgsm.es) shop. This is an example of how a public website can be managed from a separate app: products, categories, staff roles, and **custom banners** for the homepage.
 
-**Admin:** [tescgsm-admin.es](https://tescgsm-admin.es)  
+**Admin:** [tescgsm-admin.onrender.com](https://tescgsm-admin.onrender.com)  
 **Shop:** [tescgsm.es](https://tescgsm.es) · [source](https://github.com/kasiasaif/new-project)
 
 GitHub Pages cannot run this app. It needs Node and a database (Postgres on Render, or local MySQL).
@@ -26,7 +26,7 @@ A read-only demo account is available so anyone can look around without changing
 - **Username:** `visitor`
 - **Password:** `welcome`
 
-Open [tescgsm-admin.es](https://tescgsm-admin.es), sign in, and browse. Visitor cannot save products, banners, or account edits.
+Open [tescgsm-admin.onrender.com](https://tescgsm-admin.onrender.com), sign in, and browse. Visitor cannot save products, banners, or account edits.
 
 Admin and staff passwords are **not** stored in git. They live in a local `.env` file and in the Render dashboard.
 

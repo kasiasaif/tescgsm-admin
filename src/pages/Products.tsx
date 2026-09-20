@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { ActiveSwitch } from '../components/ActiveSwitch'
+import { BinButton } from '../components/BinButton'
 import { useAuth } from '../auth'
 import { brands, type CategoryRecord, type Product } from '../data/catalog'
 import { authHeader } from '../lib/session'
@@ -19,7 +20,7 @@ const emptyForm: Product = {
 }
 
 export function Products() {
-  const { token, products, refresh, error, setError } = useAuth()
+  const { token, products, refresh, error, setError, denyManage } = useAuth()
   const [form, setForm] = useState<Product>(emptyForm)
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [query, setQuery] = useState('')
@@ -47,6 +48,7 @@ export function Products() {
   }
 
   function startNew() {
+    if (denyManage()) return
     setError('')
     setSelectedId(0)
     setForm({
@@ -60,8 +62,14 @@ export function Products() {
     setForm(emptyForm)
   }
 
+  function editForm(patch: Partial<Product>) {
+    if (denyManage()) return
+    setForm((current) => ({ ...current, ...patch }))
+  }
+
   async function onSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (denyManage()) return
     setError('')
     const response = await fetch('/api/products', {
       method: 'PUT',
@@ -79,6 +87,7 @@ export function Products() {
   }
 
   async function onDelete(id: number) {
+    if (denyManage()) return
     if (!confirm('Remove this part?')) return
     const response = await fetch(`/api/products/${id}`, {
       method: 'DELETE',
@@ -150,18 +159,14 @@ export function Products() {
                 <h2>{editing ? form.name || 'Edit part' : 'Add part'}</h2>
                 <p className="muted">{editing ? `ID ${form.id}` : 'Creates a new row in MySQL.'}</p>
               </div>
-              {editing ? (
-                <button className="text-btn" type="button" onClick={() => void onDelete(form.id)}>
-                  Delete
-                </button>
-              ) : null}
+              {editing ? <BinButton onClick={() => void onDelete(form.id)} /> : null}
             </div>
             <form className="admin-form" onSubmit={onSave}>
               <label>
                 Name
                 <input
                   value={form.name}
-                  onChange={(event) => setForm({ ...form, name: event.target.value })}
+                  onChange={(event) => editForm({ name: event.target.value })}
                   required
                 />
               </label>
@@ -169,7 +174,7 @@ export function Products() {
                 Category
                 <select
                   value={form.category}
-                  onChange={(event) => setForm({ ...form, category: Number(event.target.value) })}
+                  onChange={(event) => editForm({ category: Number(event.target.value) })}
                   required
                 >
                   {form.category && !categories.some((item) => item.id === form.category) ? (
@@ -187,7 +192,7 @@ export function Products() {
                 <input
                   list="brand-options"
                   value={form.brand}
-                  onChange={(event) => setForm({ ...form, brand: event.target.value })}
+                  onChange={(event) => editForm({ brand: event.target.value })}
                   required
                 />
                 <datalist id="brand-options">
@@ -200,7 +205,7 @@ export function Products() {
                 Model
                 <input
                   value={form.model}
-                  onChange={(event) => setForm({ ...form, model: event.target.value })}
+                  onChange={(event) => editForm({ model: event.target.value })}
                   required
                 />
               </label>
@@ -208,7 +213,7 @@ export function Products() {
                 Spec
                 <input
                   value={form.spec}
-                  onChange={(event) => setForm({ ...form, spec: event.target.value })}
+                  onChange={(event) => editForm({ spec: event.target.value })}
                   required
                 />
               </label>
@@ -218,7 +223,7 @@ export function Products() {
                   type="number"
                   min={0}
                   value={form.price}
-                  onChange={(event) => setForm({ ...form, price: Number(event.target.value) })}
+                  onChange={(event) => editForm({ price: Number(event.target.value) })}
                   required
                 />
               </label>
@@ -229,8 +234,7 @@ export function Products() {
                   min={0}
                   value={form.previousPrice ?? ''}
                   onChange={(event) =>
-                    setForm({
-                      ...form,
+                    editForm({
                       previousPrice: event.target.value === '' ? undefined : Number(event.target.value),
                     })
                   }
@@ -240,13 +244,13 @@ export function Products() {
                 Image
                 <input
                   value={form.image}
-                  onChange={(event) => setForm({ ...form, image: event.target.value })}
+                  onChange={(event) => editForm({ image: event.target.value })}
                   required
                 />
               </label>
               <ActiveSwitch
                 checked={form.active !== false}
-                onChange={(active) => setForm({ ...form, active })}
+                onChange={(active) => editForm({ active })}
               />
               {error ? <p className="form-error">{error}</p> : null}
               <div className="hero-actions">

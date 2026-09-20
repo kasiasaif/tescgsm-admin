@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { type Product } from './data/catalog'
 import {
+  canManage,
   firstAllowedPath,
   hasPermission,
   type Permission,
@@ -15,8 +16,12 @@ type AuthContextValue = {
   setError: (value: string) => void
   products: Product[]
   can: (permission: Permission) => boolean
+  denyManage: () => boolean
+  deniedOpen: boolean
+  closeDenied: () => void
   homePath: string
   refresh: () => Promise<void>
+  reloadUser: () => Promise<void>
   login: (username: string, password: string) => Promise<boolean>
   logout: () => Promise<void>
 }
@@ -28,6 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<PublicUser | null>(null)
   const [error, setError] = useState('')
   const [products, setProducts] = useState<Product[]>([])
+  const [deniedOpen, setDeniedOpen] = useState(false)
 
   async function refresh() {
     const response = await fetch('/api/products')
@@ -69,8 +75,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setError,
       products,
       can: (permission) => hasPermission(user, permission),
+      denyManage() {
+        if (canManage(user)) return false
+        setDeniedOpen(true)
+        return true
+      },
+      deniedOpen,
+      closeDenied() {
+        setDeniedOpen(false)
+      },
       homePath: firstAllowedPath(user),
       refresh,
+      async reloadUser() {
+        if (!token) {
+          setUser(null)
+          return
+        }
+        const session = await fetch('/api/session', { headers: authHeader(token) })
+        const data = (await session.json()) as { ok?: boolean; user?: PublicUser }
+        if (!data.ok || !data.user) return
+        setUser(data.user)
+      },
       async login(username, password) {
         setError('')
         try {
@@ -101,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProducts([])
       },
     }),
-    [token, user, error, products],
+    [token, user, error, products, deniedOpen],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

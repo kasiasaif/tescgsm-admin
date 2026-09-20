@@ -11,11 +11,13 @@ export const permissionKeys = [
 
 export type Permission = (typeof permissionKeys)[number]
 
-export type UserRole = 'admin' | 'staff'
+export type UserRole = 'admin' | 'staff' | 'visitor'
 
 export type PublicUser = {
   id: number
   username: string
+  email: string
+  photo: string
   role: UserRole
   active: boolean
   permissions: Permission[]
@@ -23,9 +25,12 @@ export type PublicUser = {
 
 export const staffPermissions: Permission[] = permissionKeys.filter((item) => item !== 'staff')
 
+export const visitorPermissions: Permission[] = permissionKeys.filter((item) => item !== 'staff')
+
 export const roleLabel: Record<UserRole, string> = {
   admin: 'Admin',
   staff: 'General staff',
+  visitor: 'Visitor',
 }
 
 export const routePermission: Record<string, Permission> = {
@@ -40,11 +45,19 @@ export const routePermission: Record<string, Permission> = {
 }
 
 export function parseRole(value: unknown): UserRole {
-  return value === 'admin' ? 'admin' : 'staff'
+  if (value === 'admin') return 'admin'
+  if (value === 'visitor') return 'visitor'
+  return 'staff'
 }
 
 export function permissionsForRole(role: UserRole): Permission[] {
-  return role === 'admin' ? [...permissionKeys] : [...staffPermissions]
+  if (role === 'admin') return [...permissionKeys]
+  if (role === 'visitor') return [...visitorPermissions]
+  return [...staffPermissions]
+}
+
+export function canManage(user: PublicUser | null | undefined): boolean {
+  return Boolean(user?.active && user.role !== 'visitor')
 }
 
 export function hasPermission(user: PublicUser | null | undefined, permission: Permission): boolean {

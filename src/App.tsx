@@ -1,6 +1,8 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from './auth.tsx'
 import { AppShell } from './components/AppShell.tsx'
+import { PermissionDenied } from './components/PermissionDenied.tsx'
+import { Account } from './pages/Account.tsx'
 import { Banners } from './pages/Banners.tsx'
 import { Categories } from './pages/Categories.tsx'
 import { ComingSoon } from './pages/ComingSoon.tsx'
@@ -31,32 +33,36 @@ export default function App() {
   }
 
   return (
-    <Routes>
-      <Route element={<AppShell />}>
-        <Route path="/" element={<Guard permission="dashboard"><Dashboard /></Guard>} />
-        <Route path="/products" element={<Guard permission="products"><Products /></Guard>} />
-        <Route path="/categories" element={<Guard permission="categories"><Categories /></Guard>} />
-        <Route path="/banners" element={<Guard permission="banners"><Banners /></Guard>} />
-        <Route
-          path="/orders"
-          element={
-            <Guard permission="orders">
-              <ComingSoon title="Orders" body="Orders will land here when checkout is live. The catalog already saves to MySQL." />
-            </Guard>
-          }
-        />
-        <Route
-          path="/customers"
-          element={
-            <Guard permission="customers">
-              <ComingSoon title="Customers" body="Customer accounts are not set up yet. This menu stays so the CRM layout is ready." />
-            </Guard>
-          }
-        />
-        <Route path="/settings" element={<Guard permission="settings"><Settings /></Guard>} />
-        <Route path="/staff" element={<Guard permission="staff"><Staff /></Guard>} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Route>
-    </Routes>
+    <>
+      <Routes>
+        <Route element={<AppShell />}>
+          <Route path="/" element={<Guard permission="dashboard"><Dashboard /></Guard>} />
+          <Route path="/products" element={<Guard permission="products"><Products /></Guard>} />
+          <Route path="/categories" element={<Guard permission="categories"><Categories /></Guard>} />
+          <Route path="/banners" element={<Guard permission="banners"><Banners /></Guard>} />
+          <Route
+            path="/orders"
+            element={
+              <Guard permission="orders">
+                <ComingSoon title="Orders" body="Orders will land here when checkout is live. The catalog already saves to MySQL." />
+              </Guard>
+            }
+          />
+          <Route
+            path="/customers"
+            element={
+              <Guard permission="customers">
+                <ComingSoon title="Customers" body="Customer accounts are not set up yet. This menu stays so the CRM layout is ready." />
+              </Guard>
+            }
+          />
+          <Route path="/settings" element={<Guard permission="settings"><Settings /></Guard>} />
+          <Route path="/account" element={<Account />} />
+          <Route path="/staff" element={<Guard permission="staff"><Staff /></Guard>} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+      <PermissionDenied />
+    </>
   )
 }

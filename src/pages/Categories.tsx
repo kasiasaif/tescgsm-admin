@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { ActiveSwitch } from '../components/ActiveSwitch'
+import { BinButton } from '../components/BinButton'
 import { useAuth } from '../auth'
 import { type CategoryRecord } from '../data/catalog'
 import { authHeader } from '../lib/session'
@@ -12,7 +13,7 @@ const emptyForm: CategoryRecord = {
 }
 
 export function Categories() {
-  const { token, error, setError } = useAuth()
+  const { token, error, setError, denyManage } = useAuth()
   const [categories, setCategories] = useState<CategoryRecord[]>([])
   const [form, setForm] = useState<CategoryRecord>(emptyForm)
   const [selectedId, setSelectedId] = useState<number | null>(null)
@@ -37,6 +38,7 @@ export function Categories() {
   }
 
   function startNew() {
+    if (denyManage()) return
     setError('')
     setSelectedId(0)
     setForm(emptyForm)
@@ -47,8 +49,14 @@ export function Categories() {
     setForm(emptyForm)
   }
 
+  function editForm(patch: Partial<CategoryRecord>) {
+    if (denyManage()) return
+    setForm((current) => ({ ...current, ...patch }))
+  }
+
   async function onSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (denyManage()) return
     setError('')
     const response = await fetch('/api/categories', {
       method: 'PUT',
@@ -66,6 +74,7 @@ export function Categories() {
   }
 
   async function onDelete(id: number) {
+    if (denyManage()) return
     if (!confirm('Remove this category?')) return
     const response = await fetch(`/api/categories/${id}`, {
       method: 'DELETE',
@@ -121,11 +130,7 @@ export function Categories() {
                 <h2>{editing ? form.name || 'Edit category' : 'Add category'}</h2>
                 <p className="muted">{editing ? `ID ${form.id}` : 'Creates a new row in the categories table.'}</p>
               </div>
-              {editing ? (
-                <button className="text-btn" type="button" onClick={() => void onDelete(form.id)}>
-                  Delete
-                </button>
-              ) : null}
+              {editing ? <BinButton onClick={() => void onDelete(form.id)} /> : null}
             </div>
             <form className="admin-form" onSubmit={onSave}>
               <label>
@@ -133,20 +138,20 @@ export function Categories() {
                 <input
                   type="number"
                   value={form.sortOrder}
-                  onChange={(event) => setForm({ ...form, sortOrder: Number(event.target.value) })}
+                  onChange={(event) => editForm({ sortOrder: Number(event.target.value) })}
                 />
               </label>
               <label className="admin-wide">
                 Name
                 <input
                   value={form.name}
-                  onChange={(event) => setForm({ ...form, name: event.target.value })}
+                  onChange={(event) => editForm({ name: event.target.value })}
                   required
                 />
               </label>
               <ActiveSwitch
                 checked={form.active}
-                onChange={(active) => setForm({ ...form, active })}
+                onChange={(active) => editForm({ active })}
               />
               {error ? <p className="form-error">{error}</p> : null}
               <div className="hero-actions">

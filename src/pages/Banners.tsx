@@ -1,6 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { ActiveSwitch } from '../components/ActiveSwitch'
+import { BinButton } from '../components/BinButton'
+import { BannerPreview } from '../components/BannerPreview'
 import { useAuth } from '../auth'
+import { shopAssetUrl } from '../config'
 import { type Banner } from '../data/banner'
 import { authHeader } from '../lib/session'
 
@@ -16,7 +19,7 @@ const emptyForm: Banner = {
 }
 
 export function Banners() {
-  const { token, error, setError } = useAuth()
+  const { token, error, setError, denyManage } = useAuth()
   const [banners, setBanners] = useState<Banner[]>([])
   const [form, setForm] = useState<Banner>(emptyForm)
   const [selectedId, setSelectedId] = useState<number | null>(null)
@@ -41,6 +44,7 @@ export function Banners() {
   }
 
   function startNew() {
+    if (denyManage()) return
     setError('')
     setSelectedId(0)
     setForm(emptyForm)
@@ -51,8 +55,14 @@ export function Banners() {
     setForm(emptyForm)
   }
 
+  function editForm(patch: Partial<Banner>) {
+    if (denyManage()) return
+    setForm((current) => ({ ...current, ...patch }))
+  }
+
   async function onSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (denyManage()) return
     setError('')
     const response = await fetch('/api/banners', {
       method: 'PUT',
@@ -70,6 +80,7 @@ export function Banners() {
   }
 
   async function onDelete(id: number) {
+    if (denyManage()) return
     if (!confirm('Remove this banner?')) return
     const response = await fetch(`/api/banners/${id}`, {
       method: 'DELETE',
@@ -83,9 +94,21 @@ export function Banners() {
     await refresh()
   }
 
+  const previewBanners =
+    selectedId === null
+      ? banners.filter((item) => item.active).sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
+      : [form]
+  const previewCaption =
+    selectedId === null
+      ? 'Active banners as they appear on tescgsm.es'
+      : 'Live preview of this banner'
+  const previewBadge = selectedId !== null && !form.active ? 'Hidden on shop' : undefined
+
   return (
-    <div className="split-page">
-      <section className="panel product-list-panel">
+    <div className="banners-layout">
+      <BannerPreview banners={previewBanners} caption={previewCaption} badge={previewBadge} />
+      <div className="split-page">
+        <section className="panel product-list-panel">
         <div className="panel-head">
           <div>
             <h2>Banners</h2>
@@ -101,21 +124,24 @@ export function Banners() {
               key={banner.id}
               type="button"
               role="listitem"
-              className={selectedId === banner.id ? 'product-row is-active' : 'product-row'}
+              className={selectedId === banner.id ? 'product-row banner-row is-active' : 'product-row banner-row'}
               onClick={() => selectBanner(banner)}
             >
-              <strong>{banner.title}</strong>
-              <span>{banner.active ? 'Active' : 'Disable'} · {banner.ctaHref}</span>
+              <img className="banner-row-thumb" src={shopAssetUrl(banner.image)} alt="" />
+              <span className="banner-row-copy">
+                <strong>{banner.title}</strong>
+                <span>{banner.active ? 'Active' : 'Disable'} · {banner.ctaHref}</span>
+              </span>
             </button>
           ))}
         </div>
-      </section>
+        </section>
 
-      <section className="panel product-edit-panel">
+        <section className="panel product-edit-panel">
         {selectedId === null ? (
           <div className="empty-panel">
             <h2>Select a banner</h2>
-            <p className="muted">These rows drive the homepage banner on tescgsm.es.</p>
+            <p className="muted">These rows drive the homepage banner on tescgsm.es. The preview above matches the shop.</p>
           </div>
         ) : (
           <>
@@ -124,11 +150,7 @@ export function Banners() {
                 <h2>{editing ? form.title || 'Edit banner' : 'Add banner'}</h2>
                 <p className="muted">{editing ? `ID ${form.id}` : 'Creates a new row in the banners table.'}</p>
               </div>
-              {editing ? (
-                <button className="text-btn" type="button" onClick={() => void onDelete(form.id)}>
-                  Delete
-                </button>
-              ) : null}
+              {editing ? <BinButton onClick={() => void onDelete(form.id)} /> : null}
             </div>
             <form className="admin-form" onSubmit={onSave}>
               <label>
@@ -136,14 +158,14 @@ export function Banners() {
                 <input
                   type="number"
                   value={form.sortOrder}
-                  onChange={(event) => setForm({ ...form, sortOrder: Number(event.target.value) })}
+                  onChange={(event) => editForm({ sortOrder: Number(event.target.value) })}
                 />
               </label>
               <label className="admin-wide">
                 Title
                 <input
                   value={form.title}
-                  onChange={(event) => setForm({ ...form, title: event.target.value })}
+                  onChange={(event) => editForm({ title: event.target.value })}
                   required
                 />
               </label>
@@ -151,7 +173,7 @@ export function Banners() {
                 Body
                 <input
                   value={form.body}
-                  onChange={(event) => setForm({ ...form, body: event.target.value })}
+                  onChange={(event) => editForm({ body: event.target.value })}
                   required
                 />
               </label>
@@ -159,7 +181,7 @@ export function Banners() {
                 Button label
                 <input
                   value={form.ctaLabel}
-                  onChange={(event) => setForm({ ...form, ctaLabel: event.target.value })}
+                  onChange={(event) => editForm({ ctaLabel: event.target.value })}
                   required
                 />
               </label>
@@ -167,7 +189,7 @@ export function Banners() {
                 Button link
                 <input
                   value={form.ctaHref}
-                  onChange={(event) => setForm({ ...form, ctaHref: event.target.value })}
+                  onChange={(event) => editForm({ ctaHref: event.target.value })}
                   required
                 />
               </label>
@@ -175,13 +197,13 @@ export function Banners() {
                 Image
                 <input
                   value={form.image}
-                  onChange={(event) => setForm({ ...form, image: event.target.value })}
+                  onChange={(event) => editForm({ image: event.target.value })}
                   required
                 />
               </label>
               <ActiveSwitch
                 checked={form.active}
-                onChange={(active) => setForm({ ...form, active })}
+                onChange={(active) => editForm({ active })}
               />
               {error ? <p className="form-error">{error}</p> : null}
               <div className="hero-actions">
@@ -197,7 +219,8 @@ export function Banners() {
             </form>
           </>
         )}
-      </section>
+        </section>
+      </div>
     </div>
   )
 }

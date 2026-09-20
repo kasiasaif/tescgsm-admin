@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { ActiveSwitch } from '../components/ActiveSwitch'
+import { BinButton } from '../components/BinButton'
 import { useAuth } from '../auth'
 import { parseRole, roleLabel, type PublicUser, type UserRole } from '../data/permissions'
 import { authHeader } from '../lib/session'
@@ -112,7 +113,7 @@ export function Staff() {
           <div>
             <h2>Staff</h2>
             <p className="muted">
-              {staff.length} in the staff table. Everyone signs in here — admin or general staff.
+              {staff.length} in the staff table. Access follows the assigned permission.
             </p>
           </div>
           <button className="button button-primary" type="button" onClick={startNew}>
@@ -166,11 +167,7 @@ export function Staff() {
                   : 'Creates a login in the staff table.'}
               </p>
             </div>
-            {editing ? (
-              <button className="text-btn" type="button" onClick={() => void onDelete(form.id)}>
-                Delete
-              </button>
-            ) : null}
+            {editing ? <BinButton onClick={() => void onDelete(form.id)} /> : null}
           </div>
           <form className="admin-form" onSubmit={onSave}>
             <label>
@@ -221,6 +218,18 @@ export function Staff() {
                   <span>
                     <strong>General staff</strong>
                     <small>Catalog and shop pages. Cannot manage staff.</small>
+                  </span>
+                </label>
+                <label className={form.role === 'visitor' ? 'role-card is-selected' : 'role-card'}>
+                  <input
+                    type="radio"
+                    name="role"
+                    checked={form.role === 'visitor'}
+                    onChange={() => setForm({ ...form, role: 'visitor' })}
+                  />
+                  <span>
+                    <strong>Visitor</strong>
+                    <small>Can browse the catalog. Any database change shows a permission popup.</small>
                   </span>
                 </label>
               </div>

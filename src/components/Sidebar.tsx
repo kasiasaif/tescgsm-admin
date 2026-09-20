@@ -24,6 +24,7 @@ const nav = [
   {
     label: 'System',
     items: [
+      { to: '/account', label: 'Account' },
       { to: '/staff', label: 'Staff' },
       { to: '/settings', label: 'Settings' },
     ],
@@ -41,7 +42,9 @@ export function Sidebar({ open, onClose, onLogout }: SidebarProps) {
   const groups = nav
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => can(routePermission[item.to])),
+      items: group.items.filter(
+        (item) => item.to === '/account' || can(routePermission[item.to]),
+      ),
     }))
     .filter((group) => group.items.length > 0)
 

@@ -1,10 +1,11 @@
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { labelForCategory } from '../data/catalog'
 import { formatPrice } from '../lib/money'
 
 export function Dashboard() {
-  const { products } = useAuth()
+  const navigate = useNavigate()
+  const { products, denyManage } = useAuth()
   const live = products.filter((item) => item.active !== false)
   const hidden = products.length - live.length
   const groups = [...new Set(live.map((item) => item.category))]
@@ -43,9 +44,16 @@ export function Dashboard() {
             <h2>Catalog snapshot</h2>
             <p className="muted">Parts currently in the products table.</p>
           </div>
-          <Link className="button" to="/products">
+          <button
+            className="button"
+            type="button"
+            onClick={() => {
+              if (denyManage()) return
+              navigate('/products')
+            }}
+          >
             Manage products
-          </Link>
+          </button>
         </div>
         <div className="table-wrap">
           <table className="data-table">

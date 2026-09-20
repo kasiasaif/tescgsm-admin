@@ -1,9 +1,13 @@
+import { useAuth } from '../auth'
+
 type ActiveSwitchProps = {
   checked: boolean
   onChange: (active: boolean) => void
 }
 
 export function ActiveSwitch({ checked, onChange }: ActiveSwitchProps) {
+  const { denyManage } = useAuth()
+
   return (
     <div className="admin-wide switch-row">
       <span className={checked ? 'switch-caption is-on' : 'switch-caption'}>Active</span>
@@ -11,7 +15,10 @@ export function ActiveSwitch({ checked, onChange }: ActiveSwitchProps) {
         <input
           type="checkbox"
           checked={checked}
-          onChange={(event) => onChange(event.target.checked)}
+          onChange={(event) => {
+            if (denyManage()) return
+            onChange(event.target.checked)
+          }}
           aria-label={checked ? 'Active' : 'Disable'}
         />
         <span className="switch-track" aria-hidden="true">

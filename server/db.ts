@@ -6,7 +6,7 @@ import { seedBanners, type Banner } from '../src/data/banner.ts'
 import { seedCategories, seedProducts, type CategoryRecord, type Product } from '../src/data/catalog.ts'
 import { parseRole, permissionsForRole, type PublicUser, type UserRole } from '../src/data/permissions.ts'
 import { migrateNumericIds } from './migrate-ids.ts'
-import { hashPassword } from './password.ts'
+import { hashPassword, verifyPassword } from './password.ts'
 import { ignoreInsert, openPostgres, usesPostgres, wrapMysql, type SqlDb } from './sql.ts'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -182,6 +182,8 @@ async function createMysqlSchema(db: mysql.Pool) {
       username VARCHAR(64) NOT NULL UNIQUE,
       password_hash VARCHAR(255) NOT NULL,
       role VARCHAR(16) NOT NULL DEFAULT 'staff',
+      email VARCHAR(255) NOT NULL DEFAULT '',
+      photo MEDIUMTEXT NULL,
       active TINYINT(1) NOT NULL DEFAULT 1
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `)
@@ -235,6 +237,8 @@ async function createPostgresSchema(db: SqlDb) {
       username VARCHAR(64) NOT NULL UNIQUE,
       password_hash VARCHAR(255) NOT NULL,
       role VARCHAR(16) NOT NULL DEFAULT 'staff',
+      email VARCHAR(255) NOT NULL DEFAULT '',
+      photo TEXT,
       active SMALLINT NOT NULL DEFAULT 1
     )
   `)
@@ -268,10 +272,12 @@ async function init(): Promise<SqlDb> {
     const created = openPostgres()
     pool = created
     await createPostgresSchema(created)
+    await ensureStaffProfileColumns(created)
     await seedCategoriesIfEmpty()
     await seedIfEmpty()
     await seedBannersIfEmpty()
     await seedAdminStaff()
+    await seedVisitorStaff()
     await resetIdentity('categories')
     await resetIdentity('products')
     await resetIdentity('banners')
@@ -302,6 +308,7 @@ async function init(): Promise<SqlDb> {
   }
   await ensureColumn(pool, 'products', 'active', 'TINYINT(1) NOT NULL DEFAULT 1')
   await ensureColumn(pool, 'staff', 'role', "VARCHAR(16) NOT NULL DEFAULT 'staff'")
+  await ensureStaffProfileColumns(pool)
   await seedCategoriesIfEmpty()
   await linkProductsToCategories(pool)
   await seedIfEmpty()
@@ -309,11 +316,17 @@ async function init(): Promise<SqlDb> {
   await migrateStaffFromUsers()
   await migrateAdminsIntoStaff()
   await seedAdminStaff()
+  await seedVisitorStaff()
   return pool
 }
 
 async function getDb(): Promise<SqlDb> {
-  if (!ready) ready = init()
+  if (!ready) {
+    ready = init().catch((error) => {
+      ready = undefined
+      throw error
+    })
+  }
   return ready
 }
 
@@ -324,6 +337,16 @@ async function ensureColumn(db: SqlDb, table: string, column: string, definition
   )
   if (rows.length > 0) return
   await db.query(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)
+}
+
+async function ensureStaffProfileColumns(db: SqlDb) {
+  if (db.dialect === 'postgres') {
+    await db.query("ALTER TABLE staff ADD COLUMN IF NOT EXISTS email VARCHAR(255) NOT NULL DEFAULT ''")
+    await db.query('ALTER TABLE staff ADD COLUMN IF NOT EXISTS photo TEXT')
+    return
+  }
+  await ensureColumn(db, 'staff', 'email', "VARCHAR(255) NOT NULL DEFAULT ''")
+  await ensureColumn(db, 'staff', 'photo', 'MEDIUMTEXT NULL')
 }
 
 async function ensureIndex(db: SqlDb, table: string, index: string, column: string) {
@@ -698,6 +721,8 @@ async function seedBannersIfEmpty() {
 export type UserRecord = {
   id: number
   username: string
+  email: string
+  photo: string
   passwordHash: string
   role: UserRole
   active: boolean
@@ -706,6 +731,8 @@ export type UserRecord = {
 type StaffRow = {
   id: number
   username: string
+  email?: string | null
+  photo?: string | null
   password_hash: string
   role: string
   active: number
@@ -715,6 +742,8 @@ function rowToStaff(row: StaffRow): UserRecord {
   return {
     id: Number(row.id),
     username: row.username,
+    email: String(row.email ?? ''),
+    photo: String(row.photo ?? ''),
     passwordHash: row.password_hash,
     role: parseRole(row.role),
     active: Boolean(Number(row.active)),
@@ -725,18 +754,20 @@ export function publicUserFromRecord(record: UserRecord): PublicUser {
   return {
     id: record.id,
     username: record.username,
+    email: record.email,
+    photo: record.photo,
     role: record.role,
     active: record.active,
     permissions: permissionsForRole(record.role),
   }
 }
 
+const staffSelect =
+  'SELECT id, username, email, photo, password_hash, role, active FROM staff'
+
 export async function findStaffById(id: number): Promise<UserRecord | undefined> {
   const db = await getDb()
-  const { rows } = await db.query<StaffRow>(
-    'SELECT id, username, password_hash, role, active FROM staff WHERE id = ? LIMIT 1',
-    [id],
-  )
+  const { rows } = await db.query<StaffRow>(`${staffSelect} WHERE id = ? LIMIT 1`, [id])
   const row = rows[0]
   if (!row) return undefined
   return rowToStaff(row)
@@ -744,10 +775,7 @@ export async function findStaffById(id: number): Promise<UserRecord | undefined>
 
 export async function findLoginByUsername(username: string): Promise<UserRecord | undefined> {
   const db = await getDb()
-  const { rows } = await db.query<StaffRow>(
-    'SELECT id, username, password_hash, role, active FROM staff WHERE username = ? LIMIT 1',
-    [username],
-  )
+  const { rows } = await db.query<StaffRow>(`${staffSelect} WHERE username = ? LIMIT 1`, [username])
   const row = rows[0]
   if (!row) return undefined
   return rowToStaff(row)
@@ -755,9 +783,7 @@ export async function findLoginByUsername(username: string): Promise<UserRecord 
 
 export async function listStaff(): Promise<PublicUser[]> {
   const db = await getDb()
-  const { rows } = await db.query<StaffRow>(
-    'SELECT id, username, password_hash, role, active FROM staff ORDER BY role, username',
-  )
+  const { rows } = await db.query<StaffRow>(`${staffSelect} ORDER BY role, username`)
   return rows
     .map((row) => publicUserFromRecord(rowToStaff(row)))
     .filter((item) => Number.isInteger(item.id) && item.id > 0)
@@ -824,6 +850,43 @@ export async function upsertStaff(input: {
   return publicUserFromRecord(saved)
 }
 
+export async function updateOwnAccount(input: {
+  id: number
+  username: string
+  email: string
+  photo: string
+  currentPassword?: string
+  newPassword?: string
+}): Promise<PublicUser> {
+  const db = await getDb()
+  const existing = await findStaffById(input.id)
+  if (!existing) throw new Error('Account not found.')
+
+  const usernameTaken = await findLoginByUsername(input.username)
+  if (usernameTaken && usernameTaken.id !== existing.id) {
+    throw new Error('That username is already in use.')
+  }
+
+  let passwordHash = existing.passwordHash
+  if (input.newPassword) {
+    if (!input.currentPassword || !verifyPassword(input.currentPassword, existing.passwordHash)) {
+      throw new Error('Current password is not correct.')
+    }
+    passwordHash = hashPassword(input.newPassword)
+  }
+
+  await db.query('UPDATE staff SET username = ?, email = ?, photo = ?, password_hash = ? WHERE id = ?', [
+    input.username,
+    input.email,
+    input.photo,
+    passwordHash,
+    existing.id,
+  ])
+  const saved = await findStaffById(existing.id)
+  if (!saved) throw new Error('Could not save account.')
+  return publicUserFromRecord(saved)
+}
+
 export async function deleteStaff(id: number) {
   const db = await getDb()
   const existing = await findStaffById(id)
@@ -850,6 +913,25 @@ async function seedAdminStaff() {
     `
     INSERT INTO staff (username, password_hash, role, active)
     VALUES (?, ?, 'admin', 1)
+    `,
+    [username, hashPassword(password)],
+  )
+}
+
+async function seedVisitorStaff() {
+  const db = pool
+  if (!db) return
+  const username = process.env.VISITOR_USER ?? 'visitor'
+  const password = process.env.VISITOR_PASSWORD ?? 'welcome'
+  const existing = await db.query<{ id: number }>('SELECT id FROM staff WHERE username = ? LIMIT 1', [username])
+  if (existing.rows.length > 0) {
+    await db.query("UPDATE staff SET role = 'visitor', active = 1 WHERE id = ?", [existing.rows[0].id])
+    return
+  }
+  await db.query(
+    `
+    INSERT INTO staff (username, password_hash, role, active)
+    VALUES (?, ?, 'visitor', 1)
     `,
     [username, hashPassword(password)],
   )

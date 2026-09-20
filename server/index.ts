@@ -3,10 +3,10 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { extname, join, normalize } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { currentUser, login, logout, readToken } from './auth.ts'
-import { deleteBanner, deleteCategory, deleteProduct, deleteStaff, listBanners, listCategories, listProducts, listStaff, upsertBanner, upsertCategory, upsertProduct, upsertStaff } from './db.ts'
+import { deleteBanner, deleteCategory, deleteProduct, deleteStaff, listBanners, listCategories, listProducts, listStaff, updateOwnAccount, upsertBanner, upsertCategory, upsertProduct, upsertStaff } from './db.ts'
 import { type Banner } from '../src/data/banner.ts'
 import { type CategoryRecord, type Product } from '../src/data/catalog.ts'
-import { hasPermission, parseRole, type Permission, type UserRole } from '../src/data/permissions.ts'
+import { canManage, hasPermission, parseRole, type Permission, type UserRole } from '../src/data/permissions.ts'
 
 const port = Number(process.env.PORT ?? 3001)
 const isProd = process.env.NODE_ENV === 'production'
@@ -44,6 +44,15 @@ function forbidden(response: ServerResponse) {
   send(response, 403, { error: 'You do not have permission to do that.' })
 }
 
+async function requireUser(token: string | undefined, response: ServerResponse) {
+  const user = await currentUser(token)
+  if (!user) {
+    unauthorized(response)
+    return null
+  }
+  return user
+}
+
 async function requirePerm(token: string | undefined, permission: Permission, response: ServerResponse) {
   const user = await currentUser(token)
   if (!user) {
@@ -51,6 +60,16 @@ async function requirePerm(token: string | undefined, permission: Permission, re
     return null
   }
   if (!hasPermission(user, permission)) {
+    forbidden(response)
+    return null
+  }
+  return user
+}
+
+async function requireManage(token: string | undefined, permission: Permission, response: ServerResponse) {
+  const user = await requirePerm(token, permission, response)
+  if (!user) return null
+  if (!canManage(user)) {
     forbidden(response)
     return null
   }
@@ -168,6 +187,36 @@ function asBanner(body: Record<string, unknown>): Banner | null {
   }
 }
 
+function asAccount(body: Record<string, unknown>): {
+  username: string
+  email: string
+  photo: string
+  currentPassword?: string
+  newPassword?: string
+} | null {
+  const username = String(body.username ?? '').trim()
+  const email = String(body.email ?? '').trim().toLowerCase()
+  const photo = String(body.photo ?? '')
+  const currentPassword = String(body.currentPassword ?? '')
+  const newPasswordRaw = String(body.newPassword ?? '')
+  const newPassword = newPasswordRaw.trim() === '' ? undefined : newPasswordRaw
+
+  if (!username) return null
+  if (!/^[a-zA-Z0-9._-]{2,64}$/.test(username)) return null
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null
+  if (photo && !/^data:image\/(jpeg|jpg|png|webp|gif);base64,/i.test(photo)) return null
+  if (photo.length > 800000) return null
+  if (newPassword !== undefined && newPassword.length < 4) return null
+
+  return {
+    username,
+    email,
+    photo,
+    currentPassword: currentPassword || undefined,
+    newPassword,
+  }
+}
+
 const server = createServer((request, response) => {
   void handle(request, response)
 })
@@ -224,6 +273,27 @@ async function handle(request: IncomingMessage, response: ServerResponse) {
       return
     }
 
+    if (method === 'PUT' && url.pathname === '/api/account') {
+      const user = await requireUser(token, response)
+      if (!user) return
+      if (!canManage(user)) {
+        forbidden(response)
+        return
+      }
+      const account = asAccount(await readJson(request))
+      if (!account) {
+        send(response, 400, { error: 'Check the username, email, photo, or password and try again.' })
+        return
+      }
+      try {
+        const saved = await updateOwnAccount({ id: user.id, ...account })
+        send(response, 200, saved)
+      } catch (error) {
+        send(response, 400, { error: error instanceof Error ? error.message : 'Could not save account.' })
+      }
+      return
+    }
+
     if (method === 'GET' && url.pathname === '/api/staff') {
       if (!(await requirePerm(token, 'staff', response))) return
       send(response, 200, await listStaff())
@@ -231,7 +301,7 @@ async function handle(request: IncomingMessage, response: ServerResponse) {
     }
 
     if (method === 'PUT' && url.pathname === '/api/products') {
-      if (!(await requirePerm(token, 'products', response))) return
+      if (!(await requireManage(token, 'products', response))) return
       const product = asProduct(await readJson(request))
       if (!product) {
         send(response, 400, { error: 'The part is missing required fields.' })
@@ -248,7 +318,7 @@ async function handle(request: IncomingMessage, response: ServerResponse) {
     }
 
     if (method === 'PUT' && url.pathname === '/api/categories') {
-      if (!(await requirePerm(token, 'categories', response))) return
+      if (!(await requireManage(token, 'categories', response))) return
       const category = asCategory(await readJson(request))
       if (!category) {
         send(response, 400, { error: 'The category is missing required fields.' })
@@ -260,7 +330,7 @@ async function handle(request: IncomingMessage, response: ServerResponse) {
     }
 
     if (method === 'PUT' && url.pathname === '/api/banners') {
-      if (!(await requirePerm(token, 'banners', response))) return
+      if (!(await requireManage(token, 'banners', response))) return
       const banner = asBanner(await readJson(request))
       if (!banner) {
         send(response, 400, { error: 'The banner is missing required fields.' })
@@ -288,7 +358,7 @@ async function handle(request: IncomingMessage, response: ServerResponse) {
     }
 
     if (method === 'DELETE' && url.pathname.startsWith('/api/products/')) {
-      if (!(await requirePerm(token, 'products', response))) return
+      if (!(await requireManage(token, 'products', response))) return
       const id = pathId(url.pathname, '/api/products/')
       if (!id) {
         send(response, 400, { error: 'Missing id.' })
@@ -300,7 +370,7 @@ async function handle(request: IncomingMessage, response: ServerResponse) {
     }
 
     if (method === 'DELETE' && url.pathname.startsWith('/api/categories/')) {
-      if (!(await requirePerm(token, 'categories', response))) return
+      if (!(await requireManage(token, 'categories', response))) return
       const id = pathId(url.pathname, '/api/categories/')
       if (!id) {
         send(response, 400, { error: 'Missing id.' })
@@ -317,7 +387,7 @@ async function handle(request: IncomingMessage, response: ServerResponse) {
     }
 
     if (method === 'DELETE' && url.pathname.startsWith('/api/banners/')) {
-      if (!(await requirePerm(token, 'banners', response))) return
+      if (!(await requireManage(token, 'banners', response))) return
       const id = pathId(url.pathname, '/api/banners/')
       if (!id) {
         send(response, 400, { error: 'Missing id.' })

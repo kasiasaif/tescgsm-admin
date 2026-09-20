@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { Outlet, useLocation } from 'react-router-dom'
+import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth'
+import { roleLabel } from '../data/permissions'
 import { BrandMark } from './BrandMark'
 import { Sidebar } from './Sidebar'
+import { UserMenu } from './UserMenu'
 
 const titles: Record<string, string> = {
   '/': 'Dashboard',
@@ -12,6 +14,7 @@ const titles: Record<string, string> = {
   '/orders': 'Orders',
   '/customers': 'Customers',
   '/settings': 'Settings',
+  '/account': 'Account',
   '/staff': 'Staff',
 }
 
@@ -36,12 +39,15 @@ export function AppShell() {
             <p className="crumb">tescgsm CRM</p>
             <h1>{title}</h1>
           </div>
-          <div className="user-chip">
-            <span>{initials}</span>
-            <div>
-              <strong>{user?.username ?? 'Admin'}</strong>
-              <small>{user?.role === 'admin' ? 'Admin' : 'General staff'}</small>
-            </div>
+          <div className="user-slot">
+            <Link className="user-chip" to="/account" aria-label="Account">
+              {user?.photo ? <img src={user.photo} alt="" /> : <span>{initials}</span>}
+              <div>
+                <strong>{user?.username ?? 'Admin'}</strong>
+                <small>{user ? roleLabel[user.role] : 'Staff'}</small>
+              </div>
+            </Link>
+            {pathname === '/account' ? <UserMenu /> : null}
           </div>
         </header>
         <div className="crm-body">

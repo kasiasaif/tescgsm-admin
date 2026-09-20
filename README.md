@@ -3,7 +3,7 @@
 Admin CRM for the [tescgsm](https://tescgsm.es) shop. This is an example of how a public website can be managed from a separate app: products, categories, staff roles, and **custom banners** for the homepage.
 
 **Admin:** [tescgsm-admin.onrender.com](https://tescgsm-admin.onrender.com)  
-**Shop:** [tescgsm.es](https://tescgsm.es) · [source](https://github.com/kasiasaif/new-project)
+**Shop:** [tescgsm.es](https://tescgsm.es) · [source](https://github.com/kasiasaif/mobile-shop)
 
 GitHub Pages cannot run this app. It needs Node and a database (Postgres on Render, or local MySQL).
 

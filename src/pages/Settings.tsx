@@ -22,10 +22,6 @@ export function Settings() {
               </a>
             </dd>
           </div>
-          <div>
-            <dt>MySQL</dt>
-            <dd>Set in local `.env` (not stored in git)</dd>
-          </div>
         </dl>
       </section>
     </div>

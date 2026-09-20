@@ -1,13 +1,13 @@
 :root {
-  --sidebar: #b2bcd7;
-  --sidebar-hover: #9aa8c9;
-  --sidebar-text: #1a2744;
-  --sidebar-muted: #3e4c66;
+  --sidebar: #b4c9b6;
+  --sidebar-hover: #9bb59e;
+  --sidebar-text: #1c2f1e;
+  --sidebar-muted: #3f5542;
   --sidebar-active: #ffffff;
-  --sidebar-active-bg: #3b4d70;
+  --sidebar-active-bg: #3a5c3e;
   --accent: #4b5563;
   --accent-soft: #e5e7eb;
-  --bg: #e8eaed;
+  --bg: #e6ebe6;
   --ink: #0f172a;
   --muted: #64748b;
   --line: #e2e8f0;
@@ -100,8 +100,8 @@ a {
 }
 
 .login-brand .brand-mark {
-  width: 3rem;
-  height: 3rem;
+  width: 4.5rem;
+  height: 4.5rem;
   margin-bottom: 1.35rem;
 }
 
@@ -243,11 +243,12 @@ a {
 }
 
 .brand-mark {
-  width: 2.15rem;
-  height: 2.15rem;
+  width: 2.75rem;
+  height: 2.75rem;
   flex-shrink: 0;
   display: block;
   border-radius: 50%;
+  object-fit: cover;
   background: #fff;
 }
 
@@ -558,7 +559,7 @@ a {
 .switch-caption {
   font-size: 0.88rem;
   font-weight: 600;
-  color: #c1cfe3;
+  color: #c5d6c4;
 }
 
 .switch-caption.is-on {
@@ -593,7 +594,7 @@ a {
 }
 
 .switch.is-on .switch-track {
-  background: #5c6e99;
+  background: #5a7d5e;
 }
 
 .switch-thumb {
@@ -699,14 +700,14 @@ a {
 }
 
 .role-card.is-selected {
-  border-color: #5c6e99;
-  background: #eef2f7;
+  border-color: #5a7d5e;
+  background: #eef5ef;
 }
 
 .role-card input {
   width: auto;
   margin-top: 0.15rem;
-  accent-color: #5c6e99;
+  accent-color: #5a7d5e;
 }
 
 .role-card span {
@@ -724,7 +725,7 @@ a {
 }
 
 .data-table tbody tr.is-selected {
-  background: #eef2f7;
+  background: #eef5ef;
 }
 
 .meta-list div {

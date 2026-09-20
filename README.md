@@ -28,7 +28,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5174 and sign in with `admin` / `tescgsm`.
+Open http://localhost:5174 and sign in with the `ADMIN_USER` and `ADMIN_PASSWORD` from your local `.env` file.
 
 ## Live on tescgsm-admin.es
 

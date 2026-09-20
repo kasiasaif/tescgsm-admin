@@ -65,9 +65,9 @@ function mysqlConfig() {
   return {
     host: process.env.MYSQL_HOST ?? '127.0.0.1',
     port: Number(process.env.MYSQL_PORT ?? 3306),
-    user: process.env.MYSQL_USER ?? 'tescgsm',
-    password: process.env.MYSQL_PASSWORD ?? 'tescgsm',
-    database: process.env.MYSQL_DATABASE ?? 'tescgsm',
+    user: process.env.MYSQL_USER ?? '',
+    password: process.env.MYSQL_PASSWORD ?? '',
+    database: process.env.MYSQL_DATABASE ?? '',
   }
 }
 
@@ -839,7 +839,8 @@ async function seedAdminStaff() {
   const { rows } = await db.query<{ id: number }>("SELECT id FROM staff WHERE role = 'admin' LIMIT 1")
   if (rows.length > 0) return
   const username = process.env.ADMIN_USER ?? 'admin'
-  const password = process.env.ADMIN_PASSWORD ?? 'tescgsm'
+  const password = process.env.ADMIN_PASSWORD ?? ''
+  if (!password) return
   const existing = await db.query<{ id: number }>('SELECT id FROM staff WHERE username = ? LIMIT 1', [username])
   if (existing.rows.length > 0) {
     await db.query("UPDATE staff SET role = 'admin', active = 1 WHERE id = ?", [existing.rows[0].id])

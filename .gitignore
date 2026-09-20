@@ -11,7 +11,16 @@ node_modules
 dist
 dist-ssr
 *.local
+
+# Secrets — never commit
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+secrets.json
+
 public/products.json
 
 # Editor directories and files

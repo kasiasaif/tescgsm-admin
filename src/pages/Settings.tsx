@@ -24,7 +24,7 @@ export function Settings() {
           </div>
           <div>
             <dt>MySQL</dt>
-            <dd>127.0.0.1:3306 · schema tescgsm · user tescgsm</dd>
+            <dd>Set in local `.env` (not stored in git)</dd>
           </div>
         </dl>
       </section>

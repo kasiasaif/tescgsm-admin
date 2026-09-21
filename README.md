@@ -28,33 +28,7 @@ A read-only demo account is available so anyone can look around without changing
 
 Open [tescgsm-admin.onrender.com](https://tescgsm-admin.onrender.com), sign in, and browse. Visitor cannot save products, banners, or account edits.
 
-Admin and staff passwords are **not** stored in git. They live in a local `.env` file and in the Render dashboard.
 
-## Secrets
-
-Never commit `.env`, `DATABASE_URL`, MySQL passwords, private keys, or PEM files. `.gitignore` blocks them. Use `.env.example` as a blank template. On Render, set database and admin values in **Environment**, not in this repo.
-
-## Branches
-
-- **staging** — local work (`npm run dev` → http://localhost:5174)
-- **production** — live site; Render deploys only from this branch
-
-```bash
-git checkout production
-git merge staging
-git push
-```
-
-## Local
-
-```bash
-git checkout staging
-npm install
-cp .env.example .env
-npm run dev
-```
-
-Fill `.env` on your machine only. Open http://localhost:5174.
 
 
 

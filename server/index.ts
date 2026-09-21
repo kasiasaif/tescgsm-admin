@@ -14,26 +14,32 @@ const host = process.env.HOST ?? (isProd ? '0.0.0.0' : '127.0.0.1')
 const distDir = join(fileURLToPath(new URL('.', import.meta.url)), '..', 'dist')
 const allowedOrigins = (
   process.env.CORS_ORIGINS ??
-  'http://localhost:5173,http://localhost:5174,https://tescgsm.es,https://www.tescgsm.es,https://tescgsm-admin.es,https://www.tescgsm-admin.es'
+  'http://localhost:5173,http://localhost:5174,http://tescgsm.es,https://tescgsm.es,https://www.tescgsm.es,https://tescgsm-admin.es,https://www.tescgsm-admin.es,https://tescgsm-admin.onrender.com'
 )
   .split(',')
   .map((item) => item.trim())
   .filter(Boolean)
 
 function send(response: ServerResponse, status: number, body: unknown) {
-  response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' })
+  response.writeHead(status, {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': 'no-store',
+  })
   response.end(JSON.stringify(body))
 }
 
 function setCors(request: IncomingMessage, response: ServerResponse) {
   const origin = request.headers.origin
-  if (origin && allowedOrigins.includes(origin)) {
+  const path = (request.url ?? '/').split('?')[0]
+  const publicCatalog = path === '/api/products' || path === '/api/categories' || path === '/api/banners' || path === '/health'
+  if (origin && (allowedOrigins.includes(origin) || publicCatalog)) {
     response.setHeader('Access-Control-Allow-Origin', origin)
-  } else if (!origin) {
+  } else if (!origin || publicCatalog) {
     response.setHeader('Access-Control-Allow-Origin', '*')
   }
   response.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
   response.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+  response.setHeader('Vary', 'Origin')
 }
 
 function unauthorized(response: ServerResponse) {

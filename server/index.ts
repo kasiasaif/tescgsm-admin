@@ -14,7 +14,7 @@ const host = process.env.HOST ?? (isProd ? '0.0.0.0' : '127.0.0.1')
 const distDir = join(fileURLToPath(new URL('.', import.meta.url)), '..', 'dist')
 const allowedOrigins = (
   process.env.CORS_ORIGINS ??
-  'http://localhost:5173,http://localhost:5174,https://tescgsm.es,https://www.tescgsm.es,https://tescgsm-admin.es,https://www.tescgsm-admin.es'
+  'http://localhost:5173,http://localhost:5174,https://tescgsm.es,https://www.tescgsm.es,https://tescgsm-admin.es,https://www.tescgsm-admin.es,https://tescgsm-admin.onrender.com'
 )
   .split(',')
   .map((item) => item.trim())
@@ -235,6 +235,11 @@ async function handle(request: IncomingMessage, response: ServerResponse) {
   const method = request.method ?? 'GET'
 
   try {
+    if (method === 'GET' && (url.pathname === '/health' || url.pathname === '/api/health')) {
+      send(response, 200, { ok: true })
+      return
+    }
+
     if (method === 'GET' && url.pathname === '/api/products') {
       send(response, 200, await listProducts())
       return

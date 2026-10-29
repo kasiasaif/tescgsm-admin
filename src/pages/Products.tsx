@@ -29,7 +29,6 @@ export function Products() {
   const [categories, setCategories] = useState<CategoryRecord[]>([])
 
   const editing = selectedId !== null && selectedId > 0
-  const creating = selectedId === 0
 
   const visible = products.filter((product) => {
     const haystack = `${product.name} ${product.model} ${product.brand} ${product.category}`.toLowerCase()

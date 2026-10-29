@@ -10,6 +10,7 @@ const emptyForm: CategoryRecord = {
   name: '',
   active: true,
   sortOrder: 0,
+  minItems: 0,
 }
 
 export function Categories() {
@@ -17,9 +18,14 @@ export function Categories() {
   const [categories, setCategories] = useState<CategoryRecord[]>([])
   const [form, setForm] = useState<CategoryRecord>(emptyForm)
   const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [query, setQuery] = useState('')
 
   const editing = selectedId !== null && selectedId > 0
-  const creating = selectedId === 0
+
+  const visible = categories.filter((category) => {
+    const haystack = `${category.name} ${category.id}`.toLowerCase()
+    return haystack.includes(query.trim().toLowerCase())
+  })
 
   async function refresh() {
     const response = await fetch('/api/categories')
@@ -34,14 +40,17 @@ export function Categories() {
   function selectCategory(category: CategoryRecord) {
     setError('')
     setSelectedId(category.id)
-    setForm(category)
+    setForm({ ...category, minItems: Number(category.minItems ?? 0) })
   }
 
   function startNew() {
     if (denyManage()) return
     setError('')
     setSelectedId(0)
-    setForm(emptyForm)
+    setForm({
+      ...emptyForm,
+      sortOrder: categories.length,
+    })
   }
 
   function clearEditor() {
@@ -94,53 +103,74 @@ export function Categories() {
       <section className="panel product-list-panel">
         <div className="panel-head">
           <div>
-            <h2>Categories</h2>
-            <p className="muted">{categories.length} in MySQL</p>
+            <h2>All categories</h2>
+            <p className="muted">
+              {visible.length} of {categories.length}
+            </p>
           </div>
           <button className="button button-primary" type="button" onClick={startNew}>
             New
           </button>
         </div>
-        <div className="product-list" role="list">
-          {categories.map((category) => (
-            <button
-              key={category.id}
-              type="button"
-              role="listitem"
-              className={selectedId === category.id ? 'product-row is-active' : 'product-row'}
-              onClick={() => selectCategory(category)}
-            >
-              <strong>{category.name}</strong>
-              <span>{category.active ? 'Active' : 'Disable'} · ID {category.id}</span>
-            </button>
-          ))}
+        <input
+          className="search-input search-input-full"
+          type="search"
+          placeholder="Search name…"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+        <div className="table-wrap product-table-wrap">
+          <table className="data-table product-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Sort</th>
+                <th>Min</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map((category) => (
+                <tr
+                  key={category.id}
+                  className={selectedId === category.id ? 'is-selected' : undefined}
+                  onClick={() => selectCategory(category)}
+                >
+                  <td>
+                    <strong>{category.name}</strong>
+                    <div className="cell-sub">ID {category.id}</div>
+                  </td>
+                  <td>{category.sortOrder}</td>
+                  <td>{category.minItems}</td>
+                  <td>{category.active ? 'Active' : 'Hidden'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {visible.length === 0 ? <p className="muted">No categories match that search.</p> : null}
         </div>
       </section>
 
       <section className="panel product-edit-panel">
         {selectedId === null ? (
           <div className="empty-panel">
-            <h2>Select a category</h2>
-            <p className="muted">Active categories appear in the shop nav and filters.</p>
+            <h2>Category</h2>
+            <p className="muted">Click a row in the table to edit it here, or add a new one.</p>
           </div>
         ) : (
           <>
             <div className="panel-head">
               <div>
                 <h2>{editing ? form.name || 'Edit category' : 'Add category'}</h2>
-                <p className="muted">{editing ? `ID ${form.id}` : 'Creates a new row in the categories table.'}</p>
+                <p className="muted">{editing ? `ID ${form.id}` : 'Creates a new row in MySQL.'}</p>
               </div>
-              {editing ? <BinButton onClick={() => void onDelete(form.id)} /> : null}
+              {editing ? <BinButton onClick={() => void onDelete(form.id)} /> : (
+                <button className="button" type="button" onClick={clearEditor}>
+                  Cancel
+                </button>
+              )}
             </div>
             <form className="admin-form" onSubmit={onSave}>
-              <label>
-                Sort
-                <input
-                  type="number"
-                  value={form.sortOrder}
-                  onChange={(event) => editForm({ sortOrder: Number(event.target.value) })}
-                />
-              </label>
               <label className="admin-wide">
                 Name
                 <input
@@ -149,6 +179,27 @@ export function Categories() {
                   required
                 />
               </label>
+              <div className="admin-pair">
+                <label>
+                  Sort
+                  <input
+                    type="number"
+                    value={form.sortOrder}
+                    onChange={(event) => editForm({ sortOrder: Number(event.target.value) })}
+                  />
+                </label>
+                <label>
+                  Min items in stock
+                  <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={form.minItems}
+                    onChange={(event) => editForm({ minItems: Number(event.target.value) })}
+                    required
+                  />
+                </label>
+              </div>
               <ActiveSwitch
                 checked={form.active}
                 onChange={(active) => editForm({ active })}
@@ -158,11 +209,6 @@ export function Categories() {
                 <button className="button button-primary" type="submit">
                   {editing ? 'Save changes' : 'Add category'}
                 </button>
-                {creating ? (
-                  <button className="button" type="button" onClick={clearEditor}>
-                    Cancel
-                  </button>
-                ) : null}
               </div>
             </form>
           </>

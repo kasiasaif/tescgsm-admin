@@ -10,6 +10,7 @@ const nav = [
     items: [
       { to: '/', label: 'Dashboard' },
       { to: '/products', label: 'Products' },
+      { to: '/stock', label: 'Stock' },
       { to: '/categories', label: 'Categories' },
       { to: '/banners', label: 'Banners' },
     ],

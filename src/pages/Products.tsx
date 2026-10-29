@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { ActiveSwitch } from '../components/ActiveSwitch'
 import { BinButton } from '../components/BinButton'
 import { useAuth } from '../auth'
-import { brands, type CategoryRecord, type Product } from '../data/catalog'
+import { brands, isBelowMinStock, isOutOfStock, labelForCategory, type CategoryRecord, type Product } from '../data/catalog'
 import { authHeader } from '../lib/session'
 import { formatPrice } from '../lib/money'
 
@@ -16,6 +16,8 @@ const emptyForm: Product = {
   spec: '',
   price: 0,
   image: 'images/battery-apple.png',
+  items: 0,
+  outOfStock: 1,
   active: true,
 }
 
@@ -44,7 +46,12 @@ export function Products() {
   function selectProduct(product: Product) {
     setError('')
     setSelectedId(product.id)
-    setForm({ ...product, active: product.active !== false })
+    setForm({
+      ...product,
+      active: product.active !== false,
+      items: Number(product.items ?? 0),
+      outOfStock: Number(product.outOfStock ?? 1),
+    })
   }
 
   function startNew() {
@@ -106,7 +113,7 @@ export function Products() {
       <section className="panel product-list-panel">
         <div className="panel-head">
           <div>
-            <h2>Products</h2>
+            <h2>All products</h2>
             <p className="muted">
               {visible.length} of {products.length}
             </p>
@@ -122,30 +129,55 @@ export function Products() {
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
-        <div className="product-list" role="list">
-          {visible.map((product) => (
-            <button
-              key={product.id}
-              type="button"
-              role="listitem"
-              className={selectedId === product.id ? 'product-row is-active' : 'product-row'}
-              onClick={() => selectProduct(product)}
-            >
-              <strong>{product.name}</strong>
-              <span>
-                {product.brand} · {product.model} · {product.active !== false ? 'Active' : 'Disable'}
-              </span>
-              <em>{formatPrice(product.price)}</em>
-            </button>
-          ))}
+        <div className="table-wrap product-table-wrap">
+          <table className="data-table product-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Brand</th>
+                <th>Category</th>
+                <th>Items</th>
+                <th className="col-oos">Out of stock</th>
+                <th>Price</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map((product) => (
+                <tr
+                  key={product.id}
+                  className={[
+                    selectedId === product.id ? 'is-selected' : '',
+                    isOutOfStock(product) ? 'is-out-of-stock' : '',
+                    isBelowMinStock(product, categories) ? 'is-low-stock' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ') || undefined}
+                  onClick={() => selectProduct(product)}
+                >
+                  <td>
+                    <strong>{product.name}</strong>
+                    <div className="cell-sub">{product.model}</div>
+                  </td>
+                  <td>{product.brand}</td>
+                  <td>{labelForCategory(product.category, categories)}</td>
+                  <td>{product.items}</td>
+                  <td className="col-oos">{product.outOfStock}</td>
+                  <td>{formatPrice(product.price)}</td>
+                  <td>{product.active !== false ? 'Active' : 'Hidden'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {visible.length === 0 ? <p className="muted">No parts match that search.</p> : null}
         </div>
       </section>
 
       <section className="panel product-edit-panel">
         {selectedId === null ? (
           <div className="empty-panel">
-            <h2>Select a product</h2>
-            <p className="muted">Click a part on the left to edit it here, or add a new one.</p>
+            <h2>Product</h2>
+            <p className="muted">Click a row in the table to edit it here, or add a new one.</p>
             {categories.length === 0 ? (
               <p className="muted">
                 <Link to="/categories">Add a category</Link> before creating parts.
@@ -159,7 +191,11 @@ export function Products() {
                 <h2>{editing ? form.name || 'Edit part' : 'Add part'}</h2>
                 <p className="muted">{editing ? `ID ${form.id}` : 'Creates a new row in MySQL.'}</p>
               </div>
-              {editing ? <BinButton onClick={() => void onDelete(form.id)} /> : null}
+              {editing ? <BinButton onClick={() => void onDelete(form.id)} /> : (
+                <button className="button" type="button" onClick={clearEditor}>
+                  Cancel
+                </button>
+              )}
             </div>
             <form className="admin-form" onSubmit={onSave}>
               <label>
@@ -217,29 +253,55 @@ export function Products() {
                   required
                 />
               </label>
-              <label>
-                Price (€)
-                <input
-                  type="number"
-                  min={0}
-                  value={form.price}
-                  onChange={(event) => editForm({ price: Number(event.target.value) })}
-                  required
-                />
-              </label>
-              <label>
-                Previous price
-                <input
-                  type="number"
-                  min={0}
-                  value={form.previousPrice ?? ''}
-                  onChange={(event) =>
-                    editForm({
-                      previousPrice: event.target.value === '' ? undefined : Number(event.target.value),
-                    })
-                  }
-                />
-              </label>
+              <div className="admin-pair">
+                <label>
+                  Items
+                  <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={form.items}
+                    onChange={(event) => editForm({ items: Number(event.target.value) })}
+                    required
+                  />
+                </label>
+                <label>
+                  Out of stock
+                  <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={form.outOfStock}
+                    onChange={(event) => editForm({ outOfStock: Number(event.target.value) })}
+                    required
+                  />
+                </label>
+              </div>
+              <div className="admin-pair">
+                <label>
+                  Price (€)
+                  <input
+                    type="number"
+                    min={0}
+                    value={form.price}
+                    onChange={(event) => editForm({ price: Number(event.target.value) })}
+                    required
+                  />
+                </label>
+                <label>
+                  Previous price
+                  <input
+                    type="number"
+                    min={0}
+                    value={form.previousPrice ?? ''}
+                    onChange={(event) =>
+                      editForm({
+                        previousPrice: event.target.value === '' ? undefined : Number(event.target.value),
+                      })
+                    }
+                  />
+                </label>
+              </div>
               <label className="admin-wide">
                 Image
                 <input
@@ -257,11 +319,6 @@ export function Products() {
                 <button className="button button-primary" type="submit">
                   {editing ? 'Save changes' : 'Add part'}
                 </button>
-                {creating ? (
-                  <button className="button" type="button" onClick={clearEditor}>
-                    Cancel
-                  </button>
-                ) : null}
               </div>
             </form>
           </>

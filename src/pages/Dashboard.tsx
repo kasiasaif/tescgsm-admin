@@ -2,10 +2,11 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { labelForCategory } from '../data/catalog'
 import { formatPrice } from '../lib/money'
+import { Intake } from './Intake'
 
 export function Dashboard() {
   const navigate = useNavigate()
-  const { products, denyManage } = useAuth()
+  const { products, denyManage, can } = useAuth()
   const live = products.filter((item) => item.active !== false)
   const hidden = products.length - live.length
   const groups = [...new Set(live.map((item) => item.category))]
@@ -62,6 +63,7 @@ export function Dashboard() {
                 <th>Name</th>
                 <th>Brand</th>
                 <th>Category</th>
+                <th>Items</th>
                 <th>Price</th>
               </tr>
             </thead>
@@ -74,6 +76,7 @@ export function Dashboard() {
                   </td>
                   <td>{product.brand}</td>
                   <td>{labelForCategory(product.category)}{product.active === false ? ' · hidden' : ''}</td>
+                  <td>{product.items}</td>
                   <td>{formatPrice(product.price)}</td>
                 </tr>
               ))}
@@ -81,6 +84,8 @@ export function Dashboard() {
           </table>
         </div>
       </section>
+
+      {can('products') ? <Intake /> : null}
     </div>
   )
 }

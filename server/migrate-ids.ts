@@ -1,6 +1,6 @@
 import type mysql from 'mysql2/promise'
 import { seedBanners } from '../src/data/banner.ts'
-import { seedCategories, seedProducts } from '../src/data/catalog.ts'
+import { seedCategories } from '../src/data/catalog.ts'
 import { parseRole } from '../src/data/permissions.ts'
 
 function isIntegerType(type: string) {
@@ -85,11 +85,12 @@ async function rebuildCatalog(db: mysql.Pool) {
       id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
       name VARCHAR(255) NOT NULL,
       active TINYINT(1) NOT NULL DEFAULT 1,
-      sort_order INT NOT NULL DEFAULT 0
+      sort_order INT NOT NULL DEFAULT 0,
+      min_items INT NOT NULL DEFAULT 0
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `)
   const [categoryRows] = await db.query<mysql.RowDataPacket[]>(
-    'SELECT id, name, active, sort_order FROM categories',
+    'SELECT id, name, active, sort_order, min_items FROM categories',
   )
   const categoryMap = new Map<string, number>()
   const usedCategoryIds = new Set<number>()
@@ -107,8 +108,8 @@ async function rebuildCatalog(db: mysql.Pool) {
     nameToId.set(name, id)
     categoryMap.set(oldId, id)
     await db.query(
-      'INSERT INTO categories_new (id, name, active, sort_order) VALUES (?, ?, ?, ?)',
-      [id, row.name, row.active ? 1 : 0, Number(row.sort_order ?? 0)],
+      'INSERT INTO categories_new (id, name, active, sort_order, min_items) VALUES (?, ?, ?, ?, ?)',
+      [id, row.name, row.active ? 1 : 0, Number(row.sort_order ?? 0), Number(row.min_items ?? 0)],
     )
   }
 
@@ -123,25 +124,23 @@ async function rebuildCatalog(db: mysql.Pool) {
       price INT NOT NULL,
       previous_price INT NULL,
       image VARCHAR(255) NOT NULL,
+      items INT NOT NULL DEFAULT 0,
+      out_of_stock INT NOT NULL DEFAULT 1,
       active TINYINT(1) NOT NULL DEFAULT 1
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `)
   const [productRows] = await db.query<mysql.RowDataPacket[]>(
-    'SELECT id, name, category, brand, model, spec, price, previous_price, image, active FROM products',
+    'SELECT id, name, category, brand, model, spec, price, previous_price, image, items, out_of_stock, active FROM products',
   )
   const usedProductIds = new Set<number>()
   const fallbackCategory = seedCategories[0]?.id ?? 1
   for (const row of productRows) {
-    const seed = seedProducts.find((item) => item.name === String(row.name))
-    const id = nextMappedId(String(row.id), usedProductIds, seed?.id)
-    const category =
-      categoryMap.get(String(row.category)) ??
-      seed?.category ??
-      fallbackCategory
+    const id = nextMappedId(String(row.id), usedProductIds)
+    const category = categoryMap.get(String(row.category)) ?? fallbackCategory
     await db.query(
       `
-      INSERT INTO products_new (id, name, category, brand, model, spec, price, previous_price, image, active)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO products_new (id, name, category, brand, model, spec, price, previous_price, image, items, out_of_stock, active)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       [
         id,
@@ -153,6 +152,8 @@ async function rebuildCatalog(db: mysql.Pool) {
         Number(row.price),
         row.previous_price == null ? null : Number(row.previous_price),
         row.image,
+        Number(row.items ?? 0),
+        Number(row.out_of_stock ?? 1),
         row.active == null ? 1 : row.active ? 1 : 0,
       ],
     )

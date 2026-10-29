@@ -9,6 +9,7 @@ import { UserMenu } from './UserMenu'
 const titles: Record<string, string> = {
   '/': 'Dashboard',
   '/products': 'Products',
+  '/stock': 'Stock',
   '/categories': 'Categories',
   '/banners': 'Banners',
   '/orders': 'Orders',

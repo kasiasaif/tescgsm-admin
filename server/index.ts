@@ -4,6 +4,8 @@ import { extname, join, normalize } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { currentUser, login, logout, readToken } from './auth.ts'
 import { deleteBanner, deleteCategory, deleteProduct, deleteStaff, listBanners, listCategories, listProducts, listStaff, updateOwnAccount, upsertBanner, upsertCategory, upsertProduct, upsertStaff } from './db.ts'
+import { intakeRowsFromCatalog } from './intakeFromCatalog.ts'
+import { IntakeConfigError, proposeIntakeMatches } from './intakeModel.ts'
 import { type Banner } from '../src/data/banner.ts'
 import { type CategoryRecord, type Product } from '../src/data/catalog.ts'
 import { canManage, hasPermission, parseRole, type Permission, type UserRole } from '../src/data/permissions.ts'
@@ -116,10 +118,14 @@ function asProduct(body: Record<string, unknown>): Product | null {
   const previous = body.previousPrice === '' || body.previousPrice == null
     ? undefined
     : Number(body.previousPrice)
+  const items = body.items == null || body.items === '' ? 0 : Number(body.items)
+  const outOfStock = body.outOfStock == null || body.outOfStock === '' ? 1 : Number(body.outOfStock)
   const active = body.active == null ? true : Boolean(body.active)
 
   if (!name || !category || !brand || !model || !spec || !image || !Number.isFinite(price)) return null
   if (previous !== undefined && !Number.isFinite(previous)) return null
+  if (!Number.isInteger(items) || items < 0) return null
+  if (!Number.isInteger(outOfStock) || outOfStock < 0) return null
 
   return {
     id,
@@ -131,6 +137,8 @@ function asProduct(body: Record<string, unknown>): Product | null {
     price,
     previousPrice: previous,
     image: image.replace(/^\//, ''),
+    items,
+    outOfStock,
     active,
   }
 }
@@ -139,12 +147,14 @@ function asCategory(body: Record<string, unknown>): CategoryRecord | null {
   const id = parseId(body.id)
   const name = String(body.name ?? '').trim()
   const sortOrder = Number(body.sortOrder ?? 0)
+  const minItems = body.minItems == null || body.minItems === '' ? 0 : Number(body.minItems)
   const active = body.active == null ? true : Boolean(body.active)
 
   if (!name) return null
   if (!Number.isFinite(sortOrder)) return null
+  if (!Number.isInteger(minItems) || minItems < 0) return null
 
-  return { id, name, active, sortOrder }
+  return { id, name, active, sortOrder, minItems }
 }
 
 function asStaff(body: Record<string, unknown>): {
@@ -308,6 +318,33 @@ async function handle(request: IncomingMessage, response: ServerResponse) {
     if (method === 'GET' && url.pathname === '/api/staff') {
       if (!(await requirePerm(token, 'staff', response))) return
       send(response, 200, await listStaff())
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/api/intake/match') {
+      if (!(await requireManage(token, 'products', response))) return
+      const body = await readJson(request)
+      const note = String(body.note ?? '').trim()
+      if (!note) {
+        send(response, 400, { error: 'Paste a price note first.' })
+        return
+      }
+      try {
+        const catalog = await listProducts()
+        const model = await proposeIntakeMatches(note, catalog)
+        const built = intakeRowsFromCatalog(catalog, model.proposed)
+        const matchedLines = new Set(built.matched.map((row) => row.line))
+        const unmatched = [...built.unmatched]
+        for (const line of model.unmatched) {
+          if (line && !matchedLines.has(line) && !unmatched.includes(line)) unmatched.push(line)
+        }
+        send(response, 200, { matched: built.matched, unmatched })
+      } catch (error) {
+        const status = error instanceof IntakeConfigError ? 400 : 502
+        send(response, status, {
+          error: error instanceof Error ? error.message : 'Could not match the note.',
+        })
+      }
       return
     }
 

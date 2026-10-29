@@ -3,7 +3,8 @@
     "id": 1,
     "name": "Batteries",
     "active": true,
-    "sortOrder": 0
+    "sortOrder": 0,
+    "minItems": 0
   },
   {
     "id": 2,

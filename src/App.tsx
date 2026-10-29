@@ -8,6 +8,7 @@ import { Categories } from './pages/Categories.tsx'
 import { ComingSoon } from './pages/ComingSoon.tsx'
 import { Dashboard } from './pages/Dashboard.tsx'
 import { Login } from './pages/Login.tsx'
+import { Intake } from './pages/Intake.tsx'
 import { Products } from './pages/Products.tsx'
 import { Settings } from './pages/Settings.tsx'
 import { Staff } from './pages/Staff.tsx'
@@ -38,6 +39,8 @@ export default function App() {
         <Route element={<AppShell />}>
           <Route path="/" element={<Guard permission="dashboard"><Dashboard /></Guard>} />
           <Route path="/products" element={<Guard permission="products"><Products /></Guard>} />
+          <Route path="/stock" element={<Guard permission="products"><Intake /></Guard>} />
+          <Route path="/intake" element={<Navigate to="/stock" replace />} />
           <Route path="/categories" element={<Guard permission="categories"><Categories /></Guard>} />
           <Route path="/banners" element={<Guard permission="banners"><Banners /></Guard>} />
           <Route

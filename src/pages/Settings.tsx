@@ -10,15 +10,16 @@ export function Settings() {
             <dt>Shop</dt>
             <dd>
               <a href={shopUrl} target="_blank" rel="noreferrer">
-                tescgsm.es
+                {shopUrl.replace(/^https?:\/\//, '')}
               </a>
+              <p className="muted">This admin and the shop both use the live catalog. Save here, then open the shop.</p>
             </dd>
           </div>
           <div>
             <dt>Admin</dt>
             <dd>
               <a href={adminUrl} target="_blank" rel="noreferrer">
-                tescgsm-admin.es
+                {adminUrl.replace(/^https?:\/\//, '')}
               </a>
             </dd>
           </div>

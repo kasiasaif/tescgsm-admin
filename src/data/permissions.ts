@@ -36,6 +36,7 @@ export const roleLabel: Record<UserRole, string> = {
 export const routePermission: Record<string, Permission> = {
   '/': 'dashboard',
   '/products': 'products',
+  '/stock': 'products',
   '/categories': 'categories',
   '/banners': 'banners',
   '/orders': 'orders',

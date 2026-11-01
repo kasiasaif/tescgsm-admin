@@ -1,11 +1,22 @@
-import { useEffect, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { ActiveSwitch } from '../components/ActiveSwitch'
 import { BinButton } from '../components/BinButton'
+import { Icon } from '../components/Icon'
 import { useAuth } from '../auth'
-import { brands, isBelowMinStock, isOutOfStock, labelForCategory, type CategoryRecord, type Product } from '../data/catalog'
+import {
+  brands,
+  isBelowMinStock,
+  isOutOfStock,
+  labelForCategory,
+  minItemsForCategory,
+  type CategoryRecord,
+  type Product,
+} from '../data/catalog'
 import { authHeader } from '../lib/session'
 import { formatPrice } from '../lib/money'
+
+type ProductSort = 'name' | 'low' | 'most' | 'out' | 'min'
 
 const emptyForm: Product = {
   id: 0,
@@ -23,17 +34,43 @@ const emptyForm: Product = {
 
 export function Products() {
   const { token, products, refresh, error, setError, denyManage } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [form, setForm] = useState<Product>(emptyForm)
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [query, setQuery] = useState('')
+  const [productSort, setProductSort] = useState<ProductSort>('name')
   const [categories, setCategories] = useState<CategoryRecord[]>([])
 
   const editing = selectedId !== null && selectedId > 0
+  const openId = Number(searchParams.get('id'))
 
-  const visible = products.filter((product) => {
-    const haystack = `${product.name} ${product.model} ${product.brand} ${product.category}`.toLowerCase()
-    return haystack.includes(query.trim().toLowerCase())
-  })
+  const visible = useMemo(() => {
+    const needle = query.trim().toLowerCase()
+    const matched = products.filter((product) => {
+      if (productSort === 'out' && !isOutOfStock(product, categories)) return false
+      const haystack = `${product.name} ${product.model} ${product.brand} ${product.category}`.toLowerCase()
+      return !needle || haystack.includes(needle)
+    })
+    matched.sort((a, b) => {
+      const byName = a.name.localeCompare(b.name)
+      const itemsDiff = Number(a.items) - Number(b.items)
+      if (productSort === 'most') return itemsDiff !== 0 ? -itemsDiff : byName
+      if (productSort === 'low' || productSort === 'out') {
+        return itemsDiff !== 0 ? itemsDiff : byName
+      }
+      if (productSort === 'min') {
+        const aLow = isBelowMinStock(a, categories) ? 0 : 1
+        const bLow = isBelowMinStock(b, categories) ? 0 : 1
+        if (aLow !== bLow) return aLow - bLow
+        const aGap = Number(a.items) - minItemsForCategory(a.category, categories)
+        const bGap = Number(b.items) - minItemsForCategory(b.category, categories)
+        if (aGap !== bGap) return aGap - bGap
+        return byName
+      }
+      return byName
+    })
+    return matched
+  }, [categories, productSort, products, query])
 
   useEffect(() => {
     void fetch('/api/categories')
@@ -41,6 +78,20 @@ export function Products() {
       .then((items: CategoryRecord[]) => setCategories(items))
       .catch(() => setCategories([]))
   }, [])
+
+  useEffect(() => {
+    if (!Number.isInteger(openId) || openId < 1) return
+    const product = products.find((item) => item.id === openId)
+    if (!product) return
+    setError('')
+    setSelectedId(product.id)
+    setForm({
+      ...product,
+      active: product.active !== false,
+      items: Number(product.items ?? 0),
+      outOfStock: Number(product.outOfStock ?? 1),
+    })
+  }, [openId, products, setError])
 
   function selectProduct(product: Product) {
     setError('')
@@ -51,6 +102,7 @@ export function Products() {
       items: Number(product.items ?? 0),
       outOfStock: Number(product.outOfStock ?? 1),
     })
+    setSearchParams({ id: String(product.id) }, { replace: true })
   }
 
   function startNew() {
@@ -61,11 +113,13 @@ export function Products() {
       ...emptyForm,
       category: categories[0]?.id ?? emptyForm.category,
     })
+    setSearchParams({}, { replace: true })
   }
 
   function clearEditor() {
     setSelectedId(null)
     setForm(emptyForm)
+    setSearchParams({}, { replace: true })
   }
 
   function editForm(patch: Partial<Product>) {
@@ -89,6 +143,7 @@ export function Products() {
     }
     setSelectedId(data.id)
     setForm(data)
+    setSearchParams({ id: String(data.id) }, { replace: true })
     await refresh()
   }
 
@@ -118,25 +173,43 @@ export function Products() {
             </p>
           </div>
           <button className="button button-primary" type="button" onClick={startNew}>
+            <Icon name="plus" />
             New
           </button>
         </div>
-        <input
-          className="search-input search-input-full"
-          type="search"
-          placeholder="Search name, model, brand…"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
+        <div className="product-toolbar">
+          <label className="search-field">
+            <Icon name="search" />
+            <input
+              className="search-input search-input-full"
+              type="search"
+              placeholder="Search name, model, brand…"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </label>
+          <label className="stock-sort">
+            Sort
+            <select
+              value={productSort}
+              onChange={(event) => setProductSort(event.target.value as ProductSort)}
+            >
+              <option value="name">Name</option>
+              <option value="low">Low</option>
+              <option value="most">Most</option>
+              <option value="out">Out of stock</option>
+              <option value="min">Min</option>
+            </select>
+          </label>
+        </div>
         <div className="table-wrap product-table-wrap">
-          <table className="data-table product-table">
+          <table className="data-table product-table products-table">
             <thead>
               <tr>
                 <th>Name</th>
                 <th>Brand</th>
                 <th>Category</th>
                 <th>Items</th>
-                <th className="col-oos">Out of stock</th>
                 <th>Price</th>
                 <th>Status</th>
               </tr>
@@ -145,13 +218,7 @@ export function Products() {
               {visible.map((product) => (
                 <tr
                   key={product.id}
-                  className={[
-                    selectedId === product.id ? 'is-selected' : '',
-                    isOutOfStock(product) ? 'is-out-of-stock' : '',
-                    isBelowMinStock(product, categories) ? 'is-low-stock' : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' ') || undefined}
+                  className={selectedId === product.id ? 'is-selected' : undefined}
                   onClick={() => selectProduct(product)}
                 >
                   <td>
@@ -161,7 +228,6 @@ export function Products() {
                   <td>{product.brand}</td>
                   <td>{labelForCategory(product.category, categories)}</td>
                   <td>{product.items}</td>
-                  <td className="col-oos">{product.outOfStock}</td>
                   <td>{formatPrice(product.price)}</td>
                   <td>{product.active !== false ? 'Active' : 'Hidden'}</td>
                 </tr>
@@ -192,6 +258,7 @@ export function Products() {
               </div>
               {editing ? <BinButton onClick={() => void onDelete(form.id)} /> : (
                 <button className="button" type="button" onClick={clearEditor}>
+                  <Icon name="close" />
                   Cancel
                 </button>
               )}
@@ -252,30 +319,17 @@ export function Products() {
                   required
                 />
               </label>
-              <div className="admin-pair">
-                <label>
-                  Items
-                  <input
-                    type="number"
-                    min={0}
-                    step={1}
-                    value={form.items}
-                    onChange={(event) => editForm({ items: Number(event.target.value) })}
-                    required
-                  />
-                </label>
-                <label>
-                  Out of stock
-                  <input
-                    type="number"
-                    min={0}
-                    step={1}
-                    value={form.outOfStock}
-                    onChange={(event) => editForm({ outOfStock: Number(event.target.value) })}
-                    required
-                  />
-                </label>
-              </div>
+              <label>
+                Items
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={form.items}
+                  onChange={(event) => editForm({ items: Number(event.target.value) })}
+                  required
+                />
+              </label>
               <div className="admin-pair">
                 <label>
                   Price (€)
@@ -316,6 +370,7 @@ export function Products() {
               {error ? <p className="form-error">{error}</p> : null}
               <div className="hero-actions">
                 <button className="button button-primary" type="submit">
+                  <Icon name={editing ? 'check' : 'plus'} />
                   {editing ? 'Save changes' : 'Add part'}
                 </button>
               </div>

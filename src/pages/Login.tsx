@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { BrandMark } from '../components/BrandMark'
+import { Icon } from '../components/Icon'
 import { useAuth } from '../auth'
 
 export function Login() {
@@ -65,6 +66,7 @@ export function Login() {
           </label>
           {error ? <p className="form-error">{error}</p> : null}
           <button className="button button-primary button-block" type="submit">
+            <Icon name="arrow" />
             Continue
           </button>
           <p className="login-foot">Authorized staff only</p>

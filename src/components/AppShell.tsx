@@ -3,6 +3,7 @@ import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { roleLabel } from '../data/permissions'
 import { BrandMark } from './BrandMark'
+import { Icon } from './Icon'
 import { Sidebar } from './Sidebar'
 import { UserMenu } from './UserMenu'
 
@@ -28,31 +29,32 @@ export function AppShell() {
 
   return (
     <div className="crm">
-      <Sidebar open={open} onClose={() => setOpen(false)} onLogout={() => void logout()} />
+      <div className="crm-bg" aria-hidden="true" />
       {open ? <button className="sidebar-scrim" type="button" aria-label="Close menu" onClick={() => setOpen(false)} /> : null}
-      <div className="crm-main">
-        <header className="crm-top">
-          <button className="menu-btn" type="button" aria-label="Open menu" onClick={() => setOpen(true)}>
-            Menu
-          </button>
-          <BrandMark />
-          <div>
-            <p className="crumb">tescgsm CRM</p>
+      <div className="crm-shell">
+        <Sidebar open={open} onClose={() => setOpen(false)} onLogout={() => void logout()} />
+        <div className="crm-main">
+          <header className="crm-top">
+            <button className="menu-btn" type="button" aria-label="Open menu" onClick={() => setOpen(true)}>
+              <Icon name="menu" />
+              Menu
+            </button>
+            <BrandMark />
             <h1>{title}</h1>
+            <div className="user-slot">
+              <Link className="user-chip" to="/account" aria-label="Account">
+                {user?.photo ? <img src={user.photo} alt="" /> : <span>{initials}</span>}
+                <div>
+                  <strong>{user?.username ?? 'Admin'}</strong>
+                  <small>{user ? roleLabel[user.role] : 'Staff'}</small>
+                </div>
+              </Link>
+              {pathname === '/account' ? <UserMenu /> : null}
+            </div>
+          </header>
+          <div className="crm-body">
+            <Outlet />
           </div>
-          <div className="user-slot">
-            <Link className="user-chip" to="/account" aria-label="Account">
-              {user?.photo ? <img src={user.photo} alt="" /> : <span>{initials}</span>}
-              <div>
-                <strong>{user?.username ?? 'Admin'}</strong>
-                <small>{user ? roleLabel[user.role] : 'Staff'}</small>
-              </div>
-            </Link>
-            {pathname === '/account' ? <UserMenu /> : null}
-          </div>
-        </header>
-        <div className="crm-body">
-          <Outlet />
         </div>
       </div>
     </div>

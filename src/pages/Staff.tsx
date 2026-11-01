@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { ActiveSwitch } from '../components/ActiveSwitch'
 import { BinButton } from '../components/BinButton'
+import { Icon } from '../components/Icon'
 import { useAuth } from '../auth'
 import { parseRole, roleLabel, type PublicUser, type UserRole } from '../data/permissions'
 import { authHeader } from '../lib/session'
@@ -117,6 +118,7 @@ export function Staff() {
             </p>
           </div>
           <button className="button button-primary" type="button" onClick={startNew}>
+            <Icon name="plus" />
             New staff
           </button>
         </div>
@@ -237,9 +239,11 @@ export function Staff() {
             {error ? <p className="form-error">{error}</p> : null}
             <div className="hero-actions">
               <button className="button button-primary" type="submit">
+                <Icon name={editing ? 'check' : 'plus'} />
                 {editing ? 'Save changes' : 'Add staff'}
               </button>
               <button className="button" type="button" onClick={clearEditor}>
+                <Icon name="close" />
                 Cancel
               </button>
             </div>

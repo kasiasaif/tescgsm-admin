@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { Icon } from '../components/Icon'
 import { useAuth } from '../auth'
 import { labelForCategory } from '../data/catalog'
 import { formatPrice } from '../lib/money'
@@ -53,6 +54,7 @@ export function Dashboard() {
               navigate('/products')
             }}
           >
+            <Icon name="box" />
             Manage products
           </button>
         </div>

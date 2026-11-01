@@ -62,6 +62,7 @@ export type CategoryRow = {
   active: number
   sort_order: number
   min_items: number
+  out_of_stock: number
 }
 
 function mysqlConfig() {
@@ -142,7 +143,8 @@ async function createMysqlSchema(db: mysql.Pool) {
       name VARCHAR(255) NOT NULL,
       active TINYINT(1) NOT NULL DEFAULT 1,
       sort_order INT NOT NULL DEFAULT 0,
-      min_items INT NOT NULL DEFAULT 0
+      min_items INT NOT NULL DEFAULT 0,
+      out_of_stock INT NOT NULL DEFAULT 1
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `)
   await db.query(`
@@ -209,7 +211,8 @@ async function createPostgresSchema(db: SqlDb) {
       name VARCHAR(255) NOT NULL,
       active SMALLINT NOT NULL DEFAULT 1,
       sort_order INTEGER NOT NULL DEFAULT 0,
-      min_items INTEGER NOT NULL DEFAULT 0
+      min_items INTEGER NOT NULL DEFAULT 0,
+      out_of_stock INTEGER NOT NULL DEFAULT 1
     )
   `)
   await db.query(`
@@ -285,6 +288,7 @@ async function init(): Promise<SqlDb> {
     await ensureProductItemsColumn(created)
     await ensureProductOutOfStockColumn(created)
     await ensureCategoryMinItemsColumn(created)
+    await ensureCategoryOutOfStockColumn(created)
     await seedCategoriesIfEmpty()
     await seedBannersIfEmpty()
     await seedAdminStaff()
@@ -315,6 +319,7 @@ async function init(): Promise<SqlDb> {
   await ensureProductItemsColumn(pool)
   await ensureProductOutOfStockColumn(pool)
   await ensureCategoryMinItemsColumn(pool)
+  await ensureCategoryOutOfStockColumn(pool)
   await migrateNumericIds(createdMysql)
   try {
     await ensureForeignKey(pool, 'staff_permissions', 'fk_staff_permissions_staff', 'staff_id', 'staff', 'id', 'CASCADE')
@@ -374,6 +379,20 @@ async function ensureCategoryMinItemsColumn(db: SqlDb) {
     return
   }
   await ensureColumn(db, 'categories', 'min_items', 'INT NOT NULL DEFAULT 0')
+}
+
+async function ensureCategoryOutOfStockColumn(db: SqlDb) {
+  if (db.dialect === 'postgres') {
+    await db.query('ALTER TABLE categories ADD COLUMN IF NOT EXISTS out_of_stock INTEGER NOT NULL DEFAULT 1')
+  } else {
+    await ensureColumn(db, 'categories', 'out_of_stock', 'INT NOT NULL DEFAULT 1')
+  }
+  await db.query(`
+    UPDATE categories c
+    SET out_of_stock = COALESCE((
+      SELECT MIN(p.out_of_stock) FROM products p WHERE p.category = c.id
+    ), c.out_of_stock)
+  `)
 }
 
 async function ensureStaffProfileColumns(db: SqlDb) {
@@ -466,7 +485,8 @@ export async function listProducts(): Promise<Product[]> {
   const db = await getDb()
   const { rows } = await db.query<ProductRow>(
     `
-    SELECT p.id, p.name, p.category, p.brand, p.model, p.spec, p.price, p.previous_price, p.image, p.items, p.out_of_stock, p.active
+    SELECT p.id, p.name, p.category, p.brand, p.model, p.spec, p.price, p.previous_price, p.image, p.items,
+           COALESCE(c.out_of_stock, 1) AS out_of_stock, p.active
     FROM products p
     INNER JOIN categories c ON c.id = p.category
     ORDER BY p.name
@@ -552,13 +572,14 @@ export function rowToCategory(row: CategoryRow): CategoryRecord {
     active: Boolean(Number(row.active)),
     sortOrder: Number(row.sort_order),
     minItems: Number(row.min_items ?? 0),
+    outOfStock: Number(row.out_of_stock ?? 1),
   }
 }
 
 export async function listCategories(): Promise<CategoryRecord[]> {
   const db = await getDb()
   const { rows } = await db.query<CategoryRow>(
-    'SELECT id, name, active, sort_order, min_items FROM categories ORDER BY sort_order, name',
+    'SELECT id, name, active, sort_order, min_items, out_of_stock FROM categories ORDER BY sort_order, name',
   )
   return rows.map(rowToCategory).filter((item) => Number.isInteger(item.id) && item.id > 0)
 }
@@ -567,17 +588,14 @@ export async function upsertCategory(category: CategoryRecord): Promise<Category
   const db = await getDb()
   let id = category.id
   if (id > 0) {
-    await db.query('UPDATE categories SET name = ?, active = ?, sort_order = ?, min_items = ? WHERE id = ?', [
-      category.name,
-      category.active ? 1 : 0,
-      category.sortOrder,
-      category.minItems,
-      id,
-    ])
+    await db.query(
+      'UPDATE categories SET name = ?, active = ?, sort_order = ?, min_items = ?, out_of_stock = ? WHERE id = ?',
+      [category.name, category.active ? 1 : 0, category.sortOrder, category.minItems, category.outOfStock, id],
+    )
   } else {
     const result = await db.query(
-      'INSERT INTO categories (name, active, sort_order, min_items) VALUES (?, ?, ?, ?)',
-      [category.name, category.active ? 1 : 0, category.sortOrder, category.minItems],
+      'INSERT INTO categories (name, active, sort_order, min_items, out_of_stock) VALUES (?, ?, ?, ?, ?)',
+      [category.name, category.active ? 1 : 0, category.sortOrder, category.minItems, category.outOfStock],
     )
     id = result.insertId
   }

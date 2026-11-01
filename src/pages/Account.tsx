@@ -1,5 +1,6 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { Icon } from '../components/Icon'
 import { useAuth } from '../auth'
 import { authHeader } from '../lib/session'
 import { type PublicUser } from '../data/permissions'
@@ -168,6 +169,7 @@ export function Account() {
             )}
             <div>
               <label className="button" htmlFor="account-photo">
+                <Icon name="camera" />
                 Change photo
               </label>
               <input id="account-photo" type="file" accept="image/*" onChange={(event) => void onPhoto(event)} />
@@ -201,9 +203,11 @@ export function Account() {
           {saved ? <p className="form-ok admin-wide">{saved}</p> : null}
           <div className="hero-actions account-actions">
             <button className="button" type="button" onClick={cancelEdit}>
+              <Icon name="close" />
               Cancel
             </button>
             <button className="button button-primary" type="submit">
+              <Icon name="check" />
               Save changes
             </button>
           </div>
@@ -245,9 +249,11 @@ export function Account() {
           {saved ? <p className="form-ok admin-wide">{saved}</p> : null}
           <div className="hero-actions account-actions">
             <button className="button" type="button" onClick={cancelEdit}>
+              <Icon name="close" />
               Cancel
             </button>
             <button className="button button-primary" type="submit">
+              <Icon name="check" />
               Save changes
             </button>
           </div>

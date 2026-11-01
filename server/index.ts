@@ -148,13 +148,15 @@ function asCategory(body: Record<string, unknown>): CategoryRecord | null {
   const name = String(body.name ?? '').trim()
   const sortOrder = Number(body.sortOrder ?? 0)
   const minItems = body.minItems == null || body.minItems === '' ? 0 : Number(body.minItems)
+  const outOfStock = body.outOfStock == null || body.outOfStock === '' ? 1 : Number(body.outOfStock)
   const active = body.active == null ? true : Boolean(body.active)
 
   if (!name) return null
   if (!Number.isFinite(sortOrder)) return null
   if (!Number.isInteger(minItems) || minItems < 0) return null
+  if (!Number.isInteger(outOfStock) || outOfStock < 0) return null
 
-  return { id, name, active, sortOrder, minItems }
+  return { id, name, active, sortOrder, minItems, outOfStock }
 }
 
 function asStaff(body: Record<string, unknown>): {

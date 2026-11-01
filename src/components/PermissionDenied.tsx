@@ -1,3 +1,4 @@
+import { Icon } from './Icon'
 import { useAuth } from '../auth'
 
 export function PermissionDenied() {
@@ -22,6 +23,7 @@ export function PermissionDenied() {
         <h2 id="permission-denied-title">Permission denied</h2>
         <p id="permission-denied-body">You don't have permissions for this action.</p>
         <button className="button button-primary" type="button" onClick={closeDenied}>
+          <Icon name="check" />
           OK
         </button>
       </div>

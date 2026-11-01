@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { ActiveSwitch } from '../components/ActiveSwitch'
 import { BinButton } from '../components/BinButton'
 import { BannerPreview } from '../components/BannerPreview'
+import { Icon } from '../components/Icon'
 import { useAuth } from '../auth'
 import { shopAssetUrl } from '../config'
 import { type Banner } from '../data/banner'
@@ -115,6 +116,7 @@ export function Banners() {
             <p className="muted">{banners.length} in MySQL</p>
           </div>
           <button className="button button-primary" type="button" onClick={startNew}>
+            <Icon name="plus" />
             New
           </button>
         </div>
@@ -208,10 +210,12 @@ export function Banners() {
               {error ? <p className="form-error">{error}</p> : null}
               <div className="hero-actions">
                 <button className="button button-primary" type="submit">
+                  <Icon name={editing ? 'check' : 'plus'} />
                   {editing ? 'Save changes' : 'Add banner'}
                 </button>
                 {creating ? (
                   <button className="button" type="button" onClick={clearEditor}>
+                    <Icon name="close" />
                     Cancel
                   </button>
                 ) : null}

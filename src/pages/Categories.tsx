@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { ActiveSwitch } from '../components/ActiveSwitch'
 import { BinButton } from '../components/BinButton'
+import { Icon } from '../components/Icon'
 import { useAuth } from '../auth'
 import { type CategoryRecord } from '../data/catalog'
 import { authHeader } from '../lib/session'
@@ -11,6 +12,7 @@ const emptyForm: CategoryRecord = {
   active: true,
   sortOrder: 0,
   minItems: 0,
+  outOfStock: 1,
 }
 
 export function Categories() {
@@ -40,7 +42,11 @@ export function Categories() {
   function selectCategory(category: CategoryRecord) {
     setError('')
     setSelectedId(category.id)
-    setForm({ ...category, minItems: Number(category.minItems ?? 0) })
+    setForm({
+      ...category,
+      minItems: Number(category.minItems ?? 0),
+      outOfStock: Number(category.outOfStock ?? 1),
+    })
   }
 
   function startNew() {
@@ -109,16 +115,20 @@ export function Categories() {
             </p>
           </div>
           <button className="button button-primary" type="button" onClick={startNew}>
+            <Icon name="plus" />
             New
           </button>
         </div>
-        <input
-          className="search-input search-input-full"
-          type="search"
-          placeholder="Search name…"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
+        <label className="search-field search-field-block">
+          <Icon name="search" />
+          <input
+            className="search-input search-input-full"
+            type="search"
+            placeholder="Search name…"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </label>
         <div className="table-wrap product-table-wrap">
           <table className="data-table product-table">
             <thead>
@@ -126,6 +136,7 @@ export function Categories() {
                 <th>Name</th>
                 <th>Sort</th>
                 <th>Min</th>
+                <th>Out of stock</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -142,6 +153,7 @@ export function Categories() {
                   </td>
                   <td>{category.sortOrder}</td>
                   <td>{category.minItems}</td>
+                  <td>{category.outOfStock}</td>
                   <td>{category.active ? 'Active' : 'Hidden'}</td>
                 </tr>
               ))}
@@ -166,6 +178,7 @@ export function Categories() {
               </div>
               {editing ? <BinButton onClick={() => void onDelete(form.id)} /> : (
                 <button className="button" type="button" onClick={clearEditor}>
+                  <Icon name="close" />
                   Cancel
                 </button>
               )}
@@ -179,15 +192,15 @@ export function Categories() {
                   required
                 />
               </label>
+              <label>
+                Sort
+                <input
+                  type="number"
+                  value={form.sortOrder}
+                  onChange={(event) => editForm({ sortOrder: Number(event.target.value) })}
+                />
+              </label>
               <div className="admin-pair">
-                <label>
-                  Sort
-                  <input
-                    type="number"
-                    value={form.sortOrder}
-                    onChange={(event) => editForm({ sortOrder: Number(event.target.value) })}
-                  />
-                </label>
                 <label>
                   Min items in stock
                   <input
@@ -199,6 +212,17 @@ export function Categories() {
                     required
                   />
                 </label>
+                <label>
+                  Out of stock
+                  <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={form.outOfStock}
+                    onChange={(event) => editForm({ outOfStock: Number(event.target.value) })}
+                    required
+                  />
+                </label>
               </div>
               <ActiveSwitch
                 checked={form.active}
@@ -207,6 +231,7 @@ export function Categories() {
               {error ? <p className="form-error">{error}</p> : null}
               <div className="hero-actions">
                 <button className="button button-primary" type="submit">
+                  <Icon name={editing ? 'check' : 'plus'} />
                   {editing ? 'Save changes' : 'Add category'}
                 </button>
               </div>

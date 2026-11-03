@@ -16,7 +16,7 @@ const emptyForm: CategoryRecord = {
 }
 
 export function Categories() {
-  const { token, error, setError, denyManage } = useAuth()
+  const { token, error, setError, notify, denyManage } = useAuth()
   const [categories, setCategories] = useState<CategoryRecord[]>([])
   const [form, setForm] = useState<CategoryRecord>(emptyForm)
   const [selectedId, setSelectedId] = useState<number | null>(null)
@@ -85,6 +85,7 @@ export function Categories() {
     }
     setSelectedId(data.id)
     setForm(data)
+    notify('Category saved.')
     await refresh()
   }
 

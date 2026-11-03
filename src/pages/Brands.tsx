@@ -34,7 +34,7 @@ function readImageFile(file: File): Promise<string> {
 }
 
 export function Brands() {
-  const { token, error, setError, denyManage } = useAuth()
+  const { token, error, setError, notify, denyManage } = useAuth()
   const [brands, setBrands] = useState<BrandRecord[]>([])
   const [form, setForm] = useState<BrandRecord>(emptyForm)
   const [selectedId, setSelectedId] = useState<number | null>(null)
@@ -128,6 +128,7 @@ export function Brands() {
     }
     setSelectedId(data.id)
     setForm(data)
+    notify('Brand saved.')
     await refresh()
   }
 

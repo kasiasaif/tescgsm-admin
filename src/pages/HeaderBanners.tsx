@@ -41,7 +41,7 @@ function previewHex(value: string, fallback: string) {
 }
 
 export function HeaderBanners() {
-  const { token, error, setError, denyManage } = useAuth()
+  const { token, error, setError, notify, denyManage } = useAuth()
   const [banners, setBanners] = useState<HeaderBanner[]>([])
   const [form, setForm] = useState<HeaderBanner>(emptyForm)
   const [selectedId, setSelectedId] = useState<number | null>(null)
@@ -137,6 +137,7 @@ export function HeaderBanners() {
     }
     setSelectedId(data.id)
     setForm(data)
+    notify('Header banner saved.')
     await refresh()
   }
 

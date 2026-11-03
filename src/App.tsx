@@ -7,13 +7,15 @@ import { Banners } from './pages/Banners.tsx'
 import { Brands } from './pages/Brands.tsx'
 import { HeaderBanners } from './pages/HeaderBanners.tsx'
 import { Categories } from './pages/Categories.tsx'
-import { ComingSoon } from './pages/ComingSoon.tsx'
+import { Customers } from './pages/Customers.tsx'
+import { Orders } from './pages/Orders.tsx'
 import { Dashboard } from './pages/Dashboard.tsx'
 import { Login } from './pages/Login.tsx'
 import { Intake } from './pages/Intake.tsx'
 import { Products } from './pages/Products.tsx'
 import { Settings } from './pages/Settings.tsx'
 import { Staff } from './pages/Staff.tsx'
+import { Vouchers } from './pages/Vouchers.tsx'
 import { type Permission } from './data/permissions.ts'
 
 function Guard({ permission, children }: { permission: Permission; children: React.ReactNode }) {
@@ -47,22 +49,9 @@ export default function App() {
           <Route path="/brands" element={<Guard permission="brands"><Brands /></Guard>} />
           <Route path="/banners" element={<Guard permission="banners"><Banners /></Guard>} />
           <Route path="/header-banners" element={<Guard permission="banners"><HeaderBanners /></Guard>} />
-          <Route
-            path="/orders"
-            element={
-              <Guard permission="orders">
-                <ComingSoon title="Orders" body="Orders will land here when checkout is live. The catalog already saves to MySQL." />
-              </Guard>
-            }
-          />
-          <Route
-            path="/customers"
-            element={
-              <Guard permission="customers">
-                <ComingSoon title="Customers" body="Customer accounts are not set up yet. This menu stays so the CRM layout is ready." />
-              </Guard>
-            }
-          />
+          <Route path="/orders" element={<Guard permission="orders"><Orders /></Guard>} />
+          <Route path="/customers" element={<Guard permission="customers"><Customers /></Guard>} />
+          <Route path="/vouchers" element={<Guard permission="vouchers"><Vouchers /></Guard>} />
           <Route path="/settings" element={<Guard permission="settings"><Settings /></Guard>} />
           <Route path="/account" element={<Account />} />
           <Route path="/staff" element={<Guard permission="staff"><Staff /></Guard>} />

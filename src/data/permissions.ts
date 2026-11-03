@@ -6,6 +6,7 @@ export const permissionKeys = [
   'banners',
   'orders',
   'customers',
+  'vouchers',
   'settings',
   'staff',
 ] as const
@@ -26,7 +27,9 @@ export type PublicUser = {
 
 export const staffPermissions: Permission[] = permissionKeys.filter((item) => item !== 'staff')
 
-export const visitorPermissions: Permission[] = permissionKeys.filter((item) => item !== 'staff')
+export const visitorPermissions: Permission[] = permissionKeys.filter(
+  (item) => item !== 'staff' && item !== 'vouchers',
+)
 
 export const roleLabel: Record<UserRole, string> = {
   admin: 'Admin',
@@ -44,6 +47,7 @@ export const routePermission: Record<string, Permission> = {
   '/header-banners': 'banners',
   '/orders': 'orders',
   '/customers': 'customers',
+  '/vouchers': 'vouchers',
   '/settings': 'settings',
   '/staff': 'staff',
 }

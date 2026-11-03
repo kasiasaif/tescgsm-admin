@@ -34,7 +34,7 @@ const emptyForm: Product = {
 }
 
 export function Products() {
-  const { token, products, refresh, error, setError, denyManage } = useAuth()
+  const { token, products, refresh, error, setError, notify, denyManage } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const [form, setForm] = useState<Product>(emptyForm)
   const [selectedId, setSelectedId] = useState<number | null>(null)
@@ -152,6 +152,7 @@ export function Products() {
     setSelectedId(data.id)
     setForm(data)
     setSearchParams({ id: String(data.id) }, { replace: true })
+    notify('Part saved.')
     await refresh()
   }
 

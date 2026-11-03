@@ -3,13 +3,14 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { extname, join, normalize } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { currentUser, login, logout, readToken } from './auth.ts'
-import { deleteBanner, deleteBrand, deleteCategory, deleteHeaderBanner, deleteProduct, deleteStaff, listBanners, listBrands, listCategories, listHeaderBanners, listProducts, listStaff, updateOwnAccount, upsertBanner, upsertBrand, upsertCategory, upsertHeaderBanner, upsertProduct, upsertStaff } from './db.ts'
+import { deleteBanner, deleteBrand, deleteCategory, deleteHeaderBanner, deleteProduct, deleteStaff, deleteVoucher, findActiveVoucher, listBanners, listBrands, listCategories, listHeaderBanners, listProducts, listShopCustomers, listShopOrders, listStaff, listVouchers, orderProgress, saveShopCustomer, saveShopOrder, updateOwnAccount, updateShopCustomer, updateShopOrder, upsertBanner, upsertBrand, upsertCategory, upsertHeaderBanner, upsertProduct, upsertStaff, upsertVoucher } from './db.ts'
 import { listShopImages, saveShopImage } from './images.ts'
 import { intakeRowsFromCatalog } from './intakeFromCatalog.ts'
 import { IntakeConfigError, proposeIntakeMatches } from './intakeModel.ts'
 import { parseHeaderBannerFont, parseOpacity, type Banner, type HeaderBanner } from '../src/data/banner.ts'
 import { type BrandRecord, type CategoryRecord, type Product } from '../src/data/catalog.ts'
 import { canManage, hasPermission, parseRole, type Permission, type UserRole } from '../src/data/permissions.ts'
+import { type ShopCustomerInput, type ShopOrderInput, type ShopOrderLine, type ShopOrderStatus } from '../src/data/sales.ts'
 
 const port = Number(process.env.PORT ?? 3001)
 const isProd = process.env.NODE_ENV === 'production'
@@ -34,7 +35,7 @@ function send(response: ServerResponse, status: number, body: unknown) {
 function setCors(request: IncomingMessage, response: ServerResponse) {
   const origin = request.headers.origin
   const path = (request.url ?? '/').split('?')[0]
-  const publicCatalog = path === '/api/products' || path === '/api/categories' || path === '/api/brands' || path === '/api/banners' || path === '/api/header-banners' || path === '/health'
+  const publicCatalog = path === '/api/products' || path === '/api/categories' || path === '/api/brands' || path === '/api/banners' || path === '/api/header-banners' || path === '/api/vouchers/check' || path === '/health'
   if (origin && (allowedOrigins.includes(origin) || publicCatalog)) {
     response.setHeader('Access-Control-Allow-Origin', origin)
   } else if (!origin || publicCatalog) {
@@ -83,6 +84,93 @@ async function requireManage(token: string | undefined, permission: Permission, 
     return null
   }
   return user
+}
+
+async function requireAdmin(token: string | undefined, response: ServerResponse) {
+  const user = await requireUser(token, response)
+  if (!user) return null
+  if (user.role !== 'admin') {
+    forbidden(response)
+    return null
+  }
+  return user
+}
+
+function clip(value: unknown, max: number) {
+  return String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, max)
+}
+
+function asCustomerInput(body: Record<string, unknown>): (ShopCustomerInput & { overwrite: boolean }) | null {
+  const email = clip(body.email, 255).toLowerCase()
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null
+  const kind = body.kind === 'private' || body.kind === 'business' ? body.kind : ''
+  const passwordHash = /^[a-f0-9]{64}$/i.test(String(body.passwordHash ?? '')) ? String(body.passwordHash) : ''
+  return {
+    email,
+    kind,
+    firstName: clip(body.firstName, 128),
+    lastName: clip(body.lastName, 128),
+    company: clip(body.company, 255),
+    taxId: clip(body.taxId, 64),
+    phone: clip(body.phone, 64),
+    street: clip(body.street, 255),
+    city: clip(body.city, 128),
+    postcode: clip(body.postcode, 32),
+    province: clip(body.province, 128),
+    country: clip(body.country, 128),
+    passwordHash,
+    overwrite: body.overwrite === true,
+  }
+}
+
+function asOrderLines(value: unknown): ShopOrderLine[] | null {
+  if (!Array.isArray(value) || value.length < 1 || value.length > 40) return null
+  const lines: ShopOrderLine[] = []
+  for (const item of value) {
+    if (!item || typeof item !== 'object') return null
+    const line = item as Record<string, unknown>
+    const name = clip(line.name, 255)
+    const quantity = Number(line.quantity)
+    const price = Number(line.price)
+    if (!name) return null
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 999) return null
+    if (!Number.isInteger(price) || price < 0 || price > 100000) return null
+    lines.push({
+      id: Number.isInteger(Number(line.id)) ? Number(line.id) : 0,
+      name,
+      detail: clip(line.detail, 255),
+      quantity,
+      price,
+    })
+  }
+  return lines
+}
+
+function asOrderInput(body: Record<string, unknown>): ShopOrderInput | null {
+  const ref = clip(body.ref, 32).toUpperCase()
+  const email = clip(body.email, 255).toLowerCase()
+  const lines = asOrderLines(body.lines)
+  if (!/^TES-[A-Z0-9]{4,24}$/.test(ref)) return null
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null
+  if (!lines) return null
+  const status = body.status
+  const parsedStatus: ShopOrderStatus | undefined =
+    status === 'placed' || status === 'processing' || status === 'sent' || status === 'delivered' ? status : undefined
+  return {
+    ref,
+    email,
+    name: clip(body.name, 255),
+    phone: clip(body.phone, 64),
+    street: clip(body.street, 255),
+    city: clip(body.city, 128),
+    postcode: clip(body.postcode, 32),
+    province: clip(body.province, 128),
+    country: clip(body.country, 128),
+    lines,
+    status: parsedStatus,
+    placedAt: clip(body.placedAt, 40),
+    discountCode: clip(body.discountCode, 32),
+  }
 }
 
 async function readJson(request: IncomingMessage): Promise<Record<string, unknown>> {
@@ -153,6 +241,19 @@ function asBrand(body: Record<string, unknown>): BrandRecord | null {
   if (!name || !image) return null
 
   return { id, name, image: image.replace(/^\//, ''), active }
+}
+
+function asVoucher(body: Record<string, unknown>) {
+  const id = parseId(body.id)
+  const name = String(body.name ?? '').trim()
+  const code = String(body.code ?? '').trim()
+  const type = Number(body.type) === 2 ? 2 : 1
+  const value = body.value == null || body.value === '' ? 0 : Number(body.value)
+  const percentage = body.percentage == null || body.percentage === '' ? 0 : Number(body.percentage)
+  const active = body.active == null ? true : Boolean(body.active)
+  if (!name || !code) return null
+  if (!Number.isFinite(value) || !Number.isFinite(percentage)) return null
+  return { id, name, code, type, value, percentage, active }
 }
 
 function asCategory(body: Record<string, unknown>): CategoryRecord | null {
@@ -323,6 +424,118 @@ async function handle(request: IncomingMessage, response: ServerResponse) {
       return
     }
 
+    if (method === 'GET' && url.pathname === '/api/vouchers') {
+      if (!(await requirePerm(token, 'vouchers', response))) return
+      send(response, 200, await listVouchers())
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/api/vouchers/check') {
+      const body = await readJson(request)
+      const voucher = await findActiveVoucher(String(body.code ?? ''))
+      if (!voucher) {
+        send(response, 404, { error: 'That discount code is not valid.' })
+        return
+      }
+      send(response, 200, {
+        name: voucher.name,
+        code: voucher.code,
+        type: voucher.type,
+        value: voucher.value,
+        percentage: voucher.percentage,
+      })
+      return
+    }
+
+    if (method === 'GET' && url.pathname === '/api/customers') {
+      if (!(await requirePerm(token, 'customers', response))) return
+      send(response, 200, await listShopCustomers())
+      return
+    }
+
+    if (method === 'GET' && url.pathname === '/api/orders') {
+      if (!(await requirePerm(token, 'orders', response))) return
+      send(response, 200, await listShopOrders())
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/api/customers') {
+      const body = await readJson(request)
+      const input = asCustomerInput(body)
+      if (!input) {
+        send(response, 400, { error: 'Enter a valid customer.' })
+        return
+      }
+      const { overwrite, ...customer } = input
+      try {
+        send(response, 200, { customer: await saveShopCustomer(customer, overwrite) })
+      } catch (error) {
+        send(response, 400, { error: error instanceof Error ? error.message : 'Could not save that customer.' })
+      }
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/api/order-progress') {
+      const body = await readJson(request)
+      const email = clip(body.email, 255).toLowerCase()
+      const refs = Array.isArray(body.refs)
+        ? body.refs.map((item) => clip(item, 32).toUpperCase()).filter((item) => /^TES-[A-Z0-9]{4,24}$/.test(item))
+        : []
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        send(response, 200, [])
+        return
+      }
+      send(response, 200, await orderProgress(email, refs))
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/api/orders') {
+      const body = await readJson(request)
+      const input = asOrderInput(body)
+      if (!input) {
+        send(response, 400, { error: 'That order could not be saved.' })
+        return
+      }
+      try {
+        send(response, 200, { order: await saveShopOrder(input) })
+      } catch (error) {
+        send(response, 400, { error: error instanceof Error ? error.message : 'That order could not be saved.' })
+      }
+      return
+    }
+
+    if (method === 'PUT' && url.pathname.startsWith('/api/customers/')) {
+      if (!(await requireAdmin(token, response))) return
+      const id = pathId(url.pathname, '/api/customers/')
+      const input = asCustomerInput(await readJson(request))
+      if (!id || !input) {
+        send(response, 400, { error: 'Enter a valid customer.' })
+        return
+      }
+      try {
+        send(response, 200, await updateShopCustomer(id, input))
+      } catch (error) {
+        send(response, 400, { error: error instanceof Error ? error.message : 'Could not save that customer.' })
+      }
+      return
+    }
+
+    if (method === 'PUT' && url.pathname.startsWith('/api/orders/')) {
+      if (!(await requireAdmin(token, response))) return
+      const id = pathId(url.pathname, '/api/orders/')
+      const input = asOrderInput(await readJson(request))
+      if (!id || !input) {
+        send(response, 400, { error: 'Enter a valid order.' })
+        return
+      }
+      try {
+        send(response, 200, await updateShopOrder(id, input))
+      } catch (error) {
+        send(response, 400, { error: error instanceof Error ? error.message : 'Could not save that order.' })
+      }
+      return
+    }
+
     if (method === 'GET' && url.pathname === '/api/images') {
       if (!(await requireUser(token, response))) return
       send(response, 200, listShopImages(String(url.searchParams.get('prefix') ?? '')))
@@ -482,6 +695,21 @@ async function handle(request: IncomingMessage, response: ServerResponse) {
       return
     }
 
+    if (method === 'PUT' && url.pathname === '/api/vouchers') {
+      if (!(await requireManage(token, 'vouchers', response))) return
+      const voucher = asVoucher(await readJson(request))
+      if (!voucher) {
+        send(response, 400, { error: 'Enter a name and a code.' })
+        return
+      }
+      try {
+        send(response, 200, await upsertVoucher(voucher))
+      } catch (error) {
+        send(response, 400, { error: error instanceof Error ? error.message : 'Could not save the discount code.' })
+      }
+      return
+    }
+
     if (method === 'PUT' && url.pathname === '/api/header-banners') {
       if (!(await requireManage(token, 'banners', response))) return
       const banner = asHeaderBanner(await readJson(request))
@@ -535,6 +763,18 @@ async function handle(request: IncomingMessage, response: ServerResponse) {
         send(response, 400, { error: error instanceof Error ? error.message : 'Could not delete category.' })
         return
       }
+      send(response, 200, { ok: true })
+      return
+    }
+
+    if (method === 'DELETE' && url.pathname.startsWith('/api/vouchers/')) {
+      if (!(await requireManage(token, 'vouchers', response))) return
+      const id = pathId(url.pathname, '/api/vouchers/')
+      if (!id) {
+        send(response, 400, { error: 'Missing id.' })
+        return
+      }
+      await deleteVoucher(id)
       send(response, 200, { ok: true })
       return
     }

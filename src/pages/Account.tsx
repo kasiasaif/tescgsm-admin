@@ -47,7 +47,7 @@ function readPhoto(file: File): Promise<string> {
 }
 
 export function Account() {
-  const { token, user, reloadUser, denyManage } = useAuth()
+  const { token, user, reloadUser, denyManage, notify } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const editing = searchParams.get('edit') === '1'
   const changingPassword = searchParams.get('password') === '1'
@@ -125,7 +125,9 @@ export function Account() {
     setCurrentPassword('')
     setNewPassword('')
     setConfirmPassword('')
-    setSaved(changingPassword ? 'Password updated.' : 'Account updated.')
+    const message = changingPassword ? 'Password updated.' : 'Account updated.'
+    setSaved(message)
+    notify(message)
     setSearchParams({})
     await reloadUser()
   }

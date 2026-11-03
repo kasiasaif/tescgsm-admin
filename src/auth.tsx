@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { type Product } from './data/catalog'
 import {
   canManage,
@@ -14,6 +14,9 @@ type AuthContextValue = {
   user: PublicUser | null
   error: string
   setError: (value: string) => void
+  notice: string
+  noticeKey: number
+  notify: (message: string) => void
   products: Product[]
   can: (permission: Permission) => boolean
   denyManage: () => boolean
@@ -32,6 +35,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setTokenState] = useState(getToken)
   const [user, setUser] = useState<PublicUser | null>(null)
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+  const [noticeKey, setNoticeKey] = useState(0)
+  const noticeTimer = useRef(0)
   const [products, setProducts] = useState<Product[]>([])
   const [deniedOpen, setDeniedOpen] = useState(false)
 
@@ -67,12 +73,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })()
   }, [token])
 
+  const notify = useCallback((message: string) => {
+    setNotice(message)
+    setNoticeKey((current) => current + 1)
+    window.clearTimeout(noticeTimer.current)
+    noticeTimer.current = window.setTimeout(() => setNotice(''), 4000)
+  }, [])
+
   const value = useMemo<AuthContextValue>(
     () => ({
       token,
       user,
       error,
       setError,
+      notice,
+      noticeKey,
+      notify,
       products,
       can: (permission) => hasPermission(user, permission),
       denyManage() {
@@ -126,7 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProducts([])
       },
     }),
-    [token, user, error, products, deniedOpen],
+    [token, user, error, notice, noticeKey, notify, products, deniedOpen],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

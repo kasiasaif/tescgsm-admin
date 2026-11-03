@@ -12,13 +12,13 @@
   },
   {
     "id": 2,
-    "text": "10% off on first order. Use discout code 10OFF on checkout",
-    "background": "#47cdca",
+    "text": "🔥 10% off on first order. Use discount code 10OFF on checkout ⭐⭐",
+    "background": "#4581e3",
     "color": "#ffffff",
     "font": "Plus Jakarta Sans",
     "bold": true,
-    "backgroundOpacity": 100,
-    "active": false,
+    "backgroundOpacity": 85,
+    "active": true,
     "sortOrder": 1
   },
   {

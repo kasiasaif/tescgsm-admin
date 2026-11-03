@@ -23,7 +23,7 @@ const emptyForm: StaffForm = {
 }
 
 export function Staff() {
-  const { token, error, setError } = useAuth()
+  const { token, error, setError, notify } = useAuth()
   const [staff, setStaff] = useState<PublicUser[]>([])
   const [form, setForm] = useState<StaffForm>(emptyForm)
   const [selectedId, setSelectedId] = useState<number | null>(null)
@@ -89,6 +89,7 @@ export function Staff() {
       active: data.active,
       role: parseRole(data.role),
     })
+    notify('Staff saved.')
     await refresh()
   }
 

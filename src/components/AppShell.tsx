@@ -17,13 +17,14 @@ const titles: Record<string, string> = {
   '/header-banners': 'Header banners',
   '/orders': 'Orders',
   '/customers': 'Customers',
+  '/vouchers': 'Vouchers',
   '/settings': 'Settings',
   '/account': 'Account',
   '/staff': 'Staff',
 }
 
 export function AppShell() {
-  const { logout, user } = useAuth()
+  const { logout, user, notice, noticeKey } = useAuth()
   const { pathname } = useLocation()
   const [open, setOpen] = useState(false)
   const title = titles[pathname] ?? 'tescgsm'
@@ -36,6 +37,11 @@ export function AppShell() {
       <div className="crm-shell">
         <Sidebar open={open} onClose={() => setOpen(false)} onLogout={() => void logout()} />
         <div className="crm-main">
+          {notice ? (
+            <p key={noticeKey} className="save-notice" role="status">
+              {notice}
+            </p>
+          ) : null}
           <header className="crm-top">
             <button className="menu-btn" type="button" aria-label="Open menu" onClick={() => setOpen(true)}>
               <Icon name="menu" />

@@ -16,5 +16,11 @@
     "name": "Samsung",
     "image": "images/brand-samsung.svg",
     "active": true
+  },
+  {
+    "id": 5,
+    "name": "Sony",
+    "image": "images/brand-sony.svg",
+    "active": true
   }
 ]

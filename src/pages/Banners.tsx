@@ -20,7 +20,7 @@ const emptyForm: Banner = {
 }
 
 export function Banners() {
-  const { token, error, setError, denyManage } = useAuth()
+  const { token, error, setError, notify, denyManage } = useAuth()
   const [banners, setBanners] = useState<Banner[]>([])
   const [form, setForm] = useState<Banner>(emptyForm)
   const [selectedId, setSelectedId] = useState<number | null>(null)
@@ -77,6 +77,7 @@ export function Banners() {
     }
     setSelectedId(data.id)
     setForm(data)
+    notify('Banner saved.')
     await refresh()
   }
 

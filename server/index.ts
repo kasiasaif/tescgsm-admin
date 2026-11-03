@@ -3,11 +3,12 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { extname, join, normalize } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { currentUser, login, logout, readToken } from './auth.ts'
-import { deleteBanner, deleteCategory, deleteProduct, deleteStaff, listBanners, listCategories, listProducts, listStaff, updateOwnAccount, upsertBanner, upsertCategory, upsertProduct, upsertStaff } from './db.ts'
+import { deleteBanner, deleteBrand, deleteCategory, deleteHeaderBanner, deleteProduct, deleteStaff, listBanners, listBrands, listCategories, listHeaderBanners, listProducts, listStaff, updateOwnAccount, upsertBanner, upsertBrand, upsertCategory, upsertHeaderBanner, upsertProduct, upsertStaff } from './db.ts'
+import { listShopImages, saveShopImage } from './images.ts'
 import { intakeRowsFromCatalog } from './intakeFromCatalog.ts'
 import { IntakeConfigError, proposeIntakeMatches } from './intakeModel.ts'
-import { type Banner } from '../src/data/banner.ts'
-import { type CategoryRecord, type Product } from '../src/data/catalog.ts'
+import { parseHeaderBannerFont, parseOpacity, type Banner, type HeaderBanner } from '../src/data/banner.ts'
+import { type BrandRecord, type CategoryRecord, type Product } from '../src/data/catalog.ts'
 import { canManage, hasPermission, parseRole, type Permission, type UserRole } from '../src/data/permissions.ts'
 
 const port = Number(process.env.PORT ?? 3001)
@@ -33,7 +34,7 @@ function send(response: ServerResponse, status: number, body: unknown) {
 function setCors(request: IncomingMessage, response: ServerResponse) {
   const origin = request.headers.origin
   const path = (request.url ?? '/').split('?')[0]
-  const publicCatalog = path === '/api/products' || path === '/api/categories' || path === '/api/banners' || path === '/health'
+  const publicCatalog = path === '/api/products' || path === '/api/categories' || path === '/api/brands' || path === '/api/banners' || path === '/api/header-banners' || path === '/health'
   if (origin && (allowedOrigins.includes(origin) || publicCatalog)) {
     response.setHeader('Access-Control-Allow-Origin', origin)
   } else if (!origin || publicCatalog) {
@@ -143,6 +144,17 @@ function asProduct(body: Record<string, unknown>): Product | null {
   }
 }
 
+function asBrand(body: Record<string, unknown>): BrandRecord | null {
+  const id = parseId(body.id)
+  const name = String(body.name ?? '').trim()
+  const image = String(body.image ?? '').trim()
+  const active = body.active == null ? true : Boolean(body.active)
+
+  if (!name || !image) return null
+
+  return { id, name, image: image.replace(/^\//, ''), active }
+}
+
 function asCategory(body: Record<string, unknown>): CategoryRecord | null {
   const id = parseId(body.id)
   const name = String(body.name ?? '').trim()
@@ -178,6 +190,34 @@ function asStaff(body: Record<string, unknown>): {
   if (password !== undefined && password.length < 4) return null
 
   return { id, username, password, active, role }
+}
+
+function parseHexColor(value: unknown): string | null {
+  const raw = String(value ?? '').trim()
+  const short = /^#([0-9a-fA-F]{3})$/.exec(raw)
+  if (short) {
+    const hex = short[1]
+    return `#${hex[0]}${hex[0]}${hex[1]}${hex[1]}${hex[2]}${hex[2]}`.toLowerCase()
+  }
+  if (/^#([0-9a-fA-F]{6})$/.test(raw)) return raw.toLowerCase()
+  return null
+}
+
+function asHeaderBanner(body: Record<string, unknown>): HeaderBanner | null {
+  const id = parseId(body.id)
+  const text = String(body.text ?? '').trim()
+  const background = parseHexColor(body.background)
+  const color = parseHexColor(body.color) ?? '#ffffff'
+  const font = parseHeaderBannerFont(body.font)
+  const sortOrder = Number(body.sortOrder ?? 0)
+  const active = body.active == null ? true : Boolean(body.active)
+  const bold = body.bold == null ? true : Boolean(body.bold)
+  const backgroundOpacity = parseOpacity(body.backgroundOpacity ?? 100)
+
+  if (!text || !background) return null
+  if (!Number.isFinite(sortOrder)) return null
+
+  return { id, text, background, backgroundOpacity, color, font, bold, active, sortOrder }
 }
 
 function asBanner(body: Record<string, unknown>): Banner | null {
@@ -268,8 +308,43 @@ async function handle(request: IncomingMessage, response: ServerResponse) {
       return
     }
 
+    if (method === 'GET' && url.pathname === '/api/brands') {
+      send(response, 200, await listBrands())
+      return
+    }
+
     if (method === 'GET' && url.pathname === '/api/banners') {
       send(response, 200, await listBanners())
+      return
+    }
+
+    if (method === 'GET' && url.pathname === '/api/header-banners') {
+      send(response, 200, await listHeaderBanners())
+      return
+    }
+
+    if (method === 'GET' && url.pathname === '/api/images') {
+      if (!(await requireUser(token, response))) return
+      send(response, 200, listShopImages(String(url.searchParams.get('prefix') ?? '')))
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/api/images') {
+      if (!(await requireManage(token, 'brands', response))) return
+      const body = await readJson(request)
+      const filename = String(body.filename ?? '').trim()
+      const data = String(body.data ?? '').trim()
+      const brand = String(body.brand ?? '').trim()
+      if (!filename || !data.startsWith('data:')) {
+        send(response, 400, { error: 'Choose an image file to upload.' })
+        return
+      }
+      try {
+        const path = saveShopImage({ filename, data, brand: brand || undefined })
+        send(response, 200, { path })
+      } catch (error) {
+        send(response, 400, { error: error instanceof Error ? error.message : 'Could not upload image.' })
+      }
       return
     }
 
@@ -379,6 +454,22 @@ async function handle(request: IncomingMessage, response: ServerResponse) {
       return
     }
 
+    if (method === 'PUT' && url.pathname === '/api/brands') {
+      if (!(await requireManage(token, 'brands', response))) return
+      const brand = asBrand(await readJson(request))
+      if (!brand) {
+        send(response, 400, { error: 'The brand is missing required fields.' })
+        return
+      }
+      try {
+        const saved = await upsertBrand(brand)
+        send(response, 200, saved)
+      } catch (error) {
+        send(response, 400, { error: error instanceof Error ? error.message : 'Could not save the brand.' })
+      }
+      return
+    }
+
     if (method === 'PUT' && url.pathname === '/api/banners') {
       if (!(await requireManage(token, 'banners', response))) return
       const banner = asBanner(await readJson(request))
@@ -387,6 +478,18 @@ async function handle(request: IncomingMessage, response: ServerResponse) {
         return
       }
       const saved = await upsertBanner(banner)
+      send(response, 200, saved)
+      return
+    }
+
+    if (method === 'PUT' && url.pathname === '/api/header-banners') {
+      if (!(await requireManage(token, 'banners', response))) return
+      const banner = asHeaderBanner(await readJson(request))
+      if (!banner) {
+        send(response, 400, { error: 'The header banner is missing required fields.' })
+        return
+      }
+      const saved = await upsertHeaderBanner(banner)
       send(response, 200, saved)
       return
     }
@@ -432,6 +535,35 @@ async function handle(request: IncomingMessage, response: ServerResponse) {
         send(response, 400, { error: error instanceof Error ? error.message : 'Could not delete category.' })
         return
       }
+      send(response, 200, { ok: true })
+      return
+    }
+
+    if (method === 'DELETE' && url.pathname.startsWith('/api/brands/')) {
+      if (!(await requireManage(token, 'brands', response))) return
+      const id = pathId(url.pathname, '/api/brands/')
+      if (!id) {
+        send(response, 400, { error: 'Missing id.' })
+        return
+      }
+      try {
+        await deleteBrand(id)
+      } catch (error) {
+        send(response, 400, { error: error instanceof Error ? error.message : 'Could not delete brand.' })
+        return
+      }
+      send(response, 200, { ok: true })
+      return
+    }
+
+    if (method === 'DELETE' && url.pathname.startsWith('/api/header-banners/')) {
+      if (!(await requireManage(token, 'banners', response))) return
+      const id = pathId(url.pathname, '/api/header-banners/')
+      if (!id) {
+        send(response, 400, { error: 'Missing id.' })
+        return
+      }
+      await deleteHeaderBanner(id)
       send(response, 200, { ok: true })
       return
     }

@@ -10,6 +10,7 @@ import {
   isOutOfStock,
   labelForCategory,
   minItemsForCategory,
+  type BrandRecord,
   type CategoryRecord,
   type Product,
 } from '../data/catalog'
@@ -40,6 +41,7 @@ export function Products() {
   const [query, setQuery] = useState('')
   const [productSort, setProductSort] = useState<ProductSort>('name')
   const [categories, setCategories] = useState<CategoryRecord[]>([])
+  const [brandRecords, setBrandRecords] = useState<BrandRecord[]>([])
 
   const editing = selectedId !== null && selectedId > 0
   const openId = Number(searchParams.get('id'))
@@ -72,11 +74,17 @@ export function Products() {
     return matched
   }, [categories, productSort, products, query])
 
+  const brandNames = brandRecords.length > 0 ? brandRecords.map((item) => item.name) : [...brands]
+
   useEffect(() => {
     void fetch('/api/categories')
       .then((response) => (response.ok ? response.json() : []))
       .then((items: CategoryRecord[]) => setCategories(items))
       .catch(() => setCategories([]))
+    void fetch('/api/brands')
+      .then((response) => (response.ok ? response.json() : []))
+      .then((items: BrandRecord[]) => setBrandRecords(items))
+      .catch(() => setBrandRecords([]))
   }, [])
 
   useEffect(() => {
@@ -298,7 +306,7 @@ export function Products() {
                   required
                 />
                 <datalist id="brand-options">
-                  {brands.map((item) => (
+                  {brandNames.map((item) => (
                     <option key={item} value={item} />
                   ))}
                 </datalist>

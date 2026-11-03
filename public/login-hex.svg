@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 400" fill="none">
+  <defs>
+    <filter id="hex-shadow" x="-35%" y="-35%" width="170%" height="170%">
+      <feDropShadow dx="0" dy="6" stdDeviation="7" flood-color="#111827" flood-opacity="0.12"/>
+    </filter>
+    <clipPath id="hex-clip">
+      <polygon points="0,-52 45,-26 45,26 0,52 -45,26 -45,-26"/>
+    </clipPath>
+  </defs>
+
+  <g fill="#fff" stroke="#eef1f4" stroke-width="1" filter="url(#hex-shadow)">
+    <!-- outer faded ring -->
+    <g opacity="0.28">
+      <polygon transform="translate(220 62)" points="0,-40 34.6,-20 34.6,20 0,40 -34.6,20 -34.6,-20"/>
+      <polygon transform="translate(102 130)" points="0,-40 34.6,-20 34.6,20 0,40 -34.6,20 -34.6,-20"/>
+      <polygon transform="translate(338 130)" points="0,-40 34.6,-20 34.6,20 0,40 -34.6,20 -34.6,-20"/>
+      <polygon transform="translate(62 258)" points="0,-40 34.6,-20 34.6,20 0,40 -34.6,20 -34.6,-20"/>
+      <polygon transform="translate(378 258)" points="0,-40 34.6,-20 34.6,20 0,40 -34.6,20 -34.6,-20"/>
+      <polygon transform="translate(140 348)" points="0,-40 34.6,-20 34.6,20 0,40 -34.6,20 -34.6,-20"/>
+      <polygon transform="translate(300 348)" points="0,-40 34.6,-20 34.6,20 0,40 -34.6,20 -34.6,-20"/>
+    </g>
+
+    <!-- main cluster -->
+    <polygon transform="translate(220 148)" points="0,-52 45,-26 45,26 0,52 -45,26 -45,-26"/>
+    <polygon transform="translate(142 193)" points="0,-52 45,-26 45,26 0,52 -45,26 -45,-26"/>
+    <polygon transform="translate(298 193)" points="0,-52 45,-26 45,26 0,52 -45,26 -45,-26"/>
+    <polygon transform="translate(220 238)" points="0,-52 45,-26 45,26 0,52 -45,26 -45,-26"/>
+    <polygon transform="translate(142 283)" points="0,-52 45,-26 45,26 0,52 -45,26 -45,-26"/>
+    <polygon transform="translate(298 283)" points="0,-52 45,-26 45,26 0,52 -45,26 -45,-26"/>
+  </g>
+
+  <!-- faded outer icons -->
+  <g stroke="#9ca3af" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity="0.35">
+    <polyline transform="translate(220 62)" points="-10,8 -4,-4 2,2 10,-8"/>
+    <path transform="translate(102 130)" d="M-8 -4h16M-8 0h16M-8 4h10"/>
+    <path transform="translate(338 130)" d="M-7-6h14v12h-14zM-3-2h6"/>
+  </g>
+
+  <!-- HubSpot-like top: dashboard window -->
+  <g transform="translate(220 148)" stroke="#6b7280" stroke-width="1.7" stroke-linecap="round">
+    <rect x="-16" y="-12" width="32" height="24" rx="3"/>
+    <path d="M-16-5h32"/>
+    <circle cx="-10" cy="-8.5" r="1.1" fill="#f59e0b" stroke="none"/>
+    <circle cx="-6" cy="-8.5" r="1.1" fill="#d1d5db" stroke="none"/>
+    <rect x="-10" y="0" width="6" height="7" rx="1" fill="#e5e7eb" stroke="none"/>
+    <rect x="-2" y="-2" width="6" height="9" rx="1" fill="#9ca3af" stroke="none"/>
+    <rect x="6" y="2" width="6" height="5" rx="1" fill="#fbbf24" stroke="none"/>
+  </g>
+
+  <!-- left: battery -->
+  <g transform="translate(142 193)" stroke="#4b5563" stroke-width="1.8" fill="none" stroke-linecap="round">
+    <rect x="-14" y="-8" width="24" height="16" rx="3"/>
+    <path d="M10-3h4v6h-4"/>
+    <rect x="-10" y="-4" width="14" height="8" rx="1.5" fill="#22c55e" stroke="none"/>
+  </g>
+
+  <!-- right: LCD / phone screen -->
+  <g transform="translate(298 193)" stroke="#4b5563" stroke-width="1.8" fill="none">
+    <rect x="-11" y="-16" width="22" height="32" rx="4"/>
+    <path d="M-4 12h8" stroke-linecap="round"/>
+  </g>
+
+  <!-- center: tescgsm mark -->
+  <g transform="translate(220 238)">
+    <rect x="-16" y="-16" width="32" height="32" rx="8" fill="#4b5563"/>
+    <text x="0" y="7" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="800" fill="#fff">t</text>
+  </g>
+
+  <!-- bottom left: network nodes -->
+  <g transform="translate(142 283)" stroke="#6b7280" stroke-width="1.7" fill="none">
+    <circle cx="0" cy="-8" r="4.5" fill="#fff"/>
+    <circle cx="-10" cy="8" r="4.5" fill="#fff"/>
+    <circle cx="10" cy="8" r="4.5" fill="#fff"/>
+    <path d="M-3-5l-5 10M3-5l5 10M-6 8h12"/>
+  </g>
+
+  <!-- bottom right: catalog / parts -->
+  <g transform="translate(298 283)" stroke="#6b7280" stroke-width="1.7" fill="none" stroke-linecap="round">
+    <path d="M-12-4l12-8 12 8v16l-12 8-12-8z"/>
+    <path d="M0-12v16M-12-4l12 8 12-8"/>
+  </g>
+</svg>

@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "name": "Apple",
+    "image": "images/brand-apple.svg",
+    "active": true
+  },
+  {
+    "id": 4,
+    "name": "Motorola",
+    "image": "images/brand-motorola.png",
+    "active": true
+  },
+  {
+    "id": 2,
+    "name": "Samsung",
+    "image": "images/brand-samsung.svg",
+    "active": true
+  }
+]

@@ -1,0 +1,35 @@
+[
+  {
+    "id": 1,
+    "text": "Free shipping on orders over €50 · Same-day dispatch in Spain",
+    "background": "#111111",
+    "color": "#ffffff",
+    "font": "Plus Jakarta Sans",
+    "bold": true,
+    "backgroundOpacity": 100,
+    "active": false,
+    "sortOrder": 0
+  },
+  {
+    "id": 2,
+    "text": "10% off on first order. Use discout code 10OFF on checkout",
+    "background": "#47cdca",
+    "color": "#ffffff",
+    "font": "Plus Jakarta Sans",
+    "bold": true,
+    "backgroundOpacity": 100,
+    "active": false,
+    "sortOrder": 1
+  },
+  {
+    "id": 3,
+    "text": "⚡10% off of your first order 📦 Use code 10OFF on checkout ✅",
+    "background": "#408248",
+    "color": "#e13737",
+    "font": "Plus Jakarta Sans",
+    "bold": true,
+    "backgroundOpacity": 10,
+    "active": true,
+    "sortOrder": 2
+  }
+]

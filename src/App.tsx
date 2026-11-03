@@ -4,6 +4,8 @@ import { AppShell } from './components/AppShell.tsx'
 import { PermissionDenied } from './components/PermissionDenied.tsx'
 import { Account } from './pages/Account.tsx'
 import { Banners } from './pages/Banners.tsx'
+import { Brands } from './pages/Brands.tsx'
+import { HeaderBanners } from './pages/HeaderBanners.tsx'
 import { Categories } from './pages/Categories.tsx'
 import { ComingSoon } from './pages/ComingSoon.tsx'
 import { Dashboard } from './pages/Dashboard.tsx'
@@ -42,7 +44,9 @@ export default function App() {
           <Route path="/stock" element={<Guard permission="products"><Intake /></Guard>} />
           <Route path="/intake" element={<Navigate to="/stock" replace />} />
           <Route path="/categories" element={<Guard permission="categories"><Categories /></Guard>} />
+          <Route path="/brands" element={<Guard permission="brands"><Brands /></Guard>} />
           <Route path="/banners" element={<Guard permission="banners"><Banners /></Guard>} />
+          <Route path="/header-banners" element={<Guard permission="banners"><HeaderBanners /></Guard>} />
           <Route
             path="/orders"
             element={

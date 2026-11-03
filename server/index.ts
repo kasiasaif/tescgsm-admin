@@ -247,7 +247,7 @@ function asVoucher(body: Record<string, unknown>) {
   const id = parseId(body.id)
   const name = String(body.name ?? '').trim()
   const code = String(body.code ?? '').trim()
-  const type = Number(body.type) === 2 ? 2 : 1
+  const type: 1 | 2 = Number(body.type) === 2 ? 2 : 1
   const value = body.value == null || body.value === '' ? 0 : Number(body.value)
   const percentage = body.percentage == null || body.percentage === '' ? 0 : Number(body.percentage)
   const active = body.active == null ? true : Boolean(body.active)

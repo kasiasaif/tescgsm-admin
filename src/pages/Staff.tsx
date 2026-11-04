@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { ActiveSwitch } from '../components/ActiveSwitch'
+import { PasswordField } from '../components/PasswordField'
 import { BinButton } from '../components/BinButton'
 import { Icon } from '../components/Icon'
 import { useAuth } from '../auth'
@@ -183,8 +184,7 @@ export function Staff() {
             </label>
             <label>
               Password
-              <input
-                type="password"
+              <PasswordField
                 value={form.password}
                 onChange={(event) => setForm({ ...form, password: event.target.value })}
                 placeholder={editing ? 'Leave blank to keep' : ''}

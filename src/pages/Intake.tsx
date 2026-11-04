@@ -38,7 +38,7 @@ function StockTable({
 }) {
   return (
     <div className="table-wrap">
-      <table className="data-table product-table">
+      <table className="data-table product-table stock-table">
         <thead>
           <tr>
             <th>Name</th>

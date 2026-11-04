@@ -1,7 +1,7 @@
 const paths = {
   plus: 'M12 5v14M5 12h14',
   check: 'M5 12.5 9.5 17 19 7.5',
-  close: 'M6 6l12 12M18 6 6 18',
+  close: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM9 9l6 6M15 9l-6 6',
   arrow: 'M5 12h14M13 6l6 6-6 6',
   table: 'M4 5h16v14H4zM4 10h16M10 5v14',
   bars: 'M5 19V10M12 19V5M19 19v-7',

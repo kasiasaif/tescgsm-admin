@@ -225,14 +225,24 @@ a {
 }
 
 .password-toggle {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
   border: 0;
   background: transparent;
   color: #6b7280;
-  font: inherit;
-  font-size: 0.78rem;
-  font-weight: 700;
-  padding: 0 0.85rem;
+  padding: 0;
   cursor: pointer;
+}
+
+.password-toggle svg {
+  width: 1.4rem;
+  height: 1.4rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .password-toggle:hover,
@@ -822,7 +832,8 @@ a {
 
 .stock-chart-label {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 2.25rem 7.4rem;
+  grid-template-columns: minmax(0, 14rem) auto auto;
+  justify-content: start;
   align-items: center;
   column-gap: 0.6rem;
   margin-bottom: 0.35rem;
@@ -855,7 +866,8 @@ a {
 }
 
 .stock-chart .stock-pill {
-  justify-self: end;
+  width: auto;
+  justify-self: start;
 }
 
 .stock-chart-track {
@@ -1201,6 +1213,24 @@ a {
 
 .products-table tbody tr.is-selected td:last-child {
   background: #eef5ef;
+}
+
+.product-table.stock-table th:nth-child(1),
+.product-table.stock-table td:nth-child(1) {
+  width: 11rem;
+  max-width: 11rem;
+}
+
+.product-table.stock-table th:nth-child(7),
+.product-table.stock-table td:nth-child(7) {
+  width: 8.8rem;
+  padding-left: 0.45rem;
+  padding-right: 0.7rem;
+  white-space: nowrap;
+}
+
+.product-table.stock-table .stock-pill {
+  width: auto;
 }
 
 .product-table .col-oos {

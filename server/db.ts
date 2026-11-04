@@ -15,6 +15,7 @@ import {
 } from '../src/data/sales.ts'
 import { migrateNumericIds } from './migrate-ids.ts'
 import { hashPassword, verifyPassword } from './password.ts'
+import { sendPlacedOrderEmail } from './orderMail.ts'
 import { ignoreInsert, openPostgres, usesPostgres, wrapMysql, type SqlDb } from './sql.ts'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -1569,6 +1570,31 @@ export async function updateShopCustomer(id: number, input: ShopCustomerInput): 
   return saved
 }
 
+function soldCounts(lines: { id: number; quantity: number }[]) {
+  const counts = new Map<number, number>()
+  for (const line of lines) {
+    const id = Number(line.id)
+    const quantity = Math.round(Number(line.quantity) || 0)
+    if (!Number.isInteger(id) || id < 1 || quantity < 1) continue
+    counts.set(id, (counts.get(id) ?? 0) + quantity)
+  }
+  return counts
+}
+
+async function takeSoldStock(changes: Map<number, number>) {
+  const db = await getDb()
+  let changed = false
+  for (const [id, sold] of changes) {
+    if (!sold) continue
+    await db.query(
+      'UPDATE products SET items = CASE WHEN items - ? < 0 THEN 0 ELSE items - ? END WHERE id = ?',
+      [sold, sold, id],
+    )
+    changed = true
+  }
+  if (changed) await exportProductsJson()
+}
+
 export async function saveShopOrder(input: ShopOrderInput): Promise<ShopOrder> {
   const db = await getDb()
   const existing = await db.query<{ id: number }>(
@@ -1599,8 +1625,14 @@ export async function saveShopOrder(input: ShopOrderInput): Promise<ShopOrder> {
       Number.isNaN(placed.getTime()) ? new Date() : placed,
     ],
   )
+  await takeSoldStock(soldCounts(input.lines))
   const saved = await orderById(inserted.insertId)
   if (!saved) throw new Error('Could not save that order.')
+  try {
+    await sendPlacedOrderEmail(saved)
+  } catch (error) {
+    console.error('Order email failed.', error instanceof Error ? error.message : error)
+  }
   return saved
 }
 
@@ -1623,6 +1655,13 @@ export async function updateShopOrder(id: number, input: ShopOrderInput): Promis
       input.country, JSON.stringify(input.lines), total, discount, totalPaid, input.status ?? current.status, id,
     ],
   )
+  const nextSold = soldCounts(input.lines)
+  const previousSold = soldCounts(current.lines)
+  const stockChange = new Map(nextSold)
+  for (const [productId, quantity] of previousSold) {
+    stockChange.set(productId, (stockChange.get(productId) ?? 0) - quantity)
+  }
+  await takeSoldStock(stockChange)
   const saved = await orderById(id)
   if (!saved) throw new Error('Could not save that order.')
   return saved

@@ -1,6 +1,7 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Icon } from '../components/Icon'
+import { PasswordField } from '../components/PasswordField'
 import { useAuth } from '../auth'
 import { authHeader } from '../lib/session'
 import { type PublicUser } from '../data/permissions'
@@ -218,8 +219,7 @@ export function Account() {
         <form className="admin-form password-form" onSubmit={(event) => void onSave(event)}>
           <label>
             Current password
-            <input
-              type="password"
+            <PasswordField
               autoComplete="current-password"
               value={currentPassword}
               onChange={(event) => setCurrentPassword(event.target.value)}
@@ -228,8 +228,7 @@ export function Account() {
           </label>
           <label>
             New password
-            <input
-              type="password"
+            <PasswordField
               autoComplete="new-password"
               value={newPassword}
               onChange={(event) => setNewPassword(event.target.value)}
@@ -239,8 +238,7 @@ export function Account() {
           </label>
           <label>
             Confirm new password
-            <input
-              type="password"
+            <PasswordField
               autoComplete="new-password"
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
